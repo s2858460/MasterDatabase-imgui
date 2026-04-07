@@ -4519,11 +4519,15 @@ static void InputTextReconcileUndoState(ImGuiInputTextState* state, const char* 
     if (first_diff == old_length && first_diff == new_length)
         return;
 
-    int old_last_diff = old_length   - 1;
+    int old_last_diff = old_length - 1;
     int new_last_diff = new_length - 1;
-    for (; old_last_diff >= first_diff && new_last_diff >= first_diff; old_last_diff--, new_last_diff--)
+    for (; old_last_diff >= first_diff && new_last_diff >= first_diff;)
+    {
         if (old_buf[old_last_diff] != new_buf[new_last_diff])
             break;
+        old_last_diff--;
+        new_last_diff--;
+    }
 
     const int insert_len = new_last_diff - first_diff + 1;
     const int delete_len = old_last_diff - first_diff + 1;
@@ -8548,17 +8552,20 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     for (ImGuiSelectionRequest& req : ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
-        {
-            Clear();
-            if (req.Selected)
-            {
-                _Storage.Data.reserve(ms_io->ItemsCount);
-                const int size_before_amends = _Storage.Data.Size;
-                for (int idx = 0; idx < ms_io->ItemsCount; idx++, _SelectionOrder++)
-                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, _SelectionOrder);
-                ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
-            }
-        }
+		{
+			Clear();
+			if (req.Selected)
+			{
+				_Storage.Data.reserve(ms_io->ItemsCount);
+				const int size_before_amends = _Storage.Data.Size;
+				for (int idx = 0; idx < ms_io->ItemsCount; idx++)
+				{
+					ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, _SelectionOrder);
+					_SelectionOrder++;
+				}
+				ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+			}
+		}
         else if (req.Type == ImGuiSelectionRequestType_SetRange)
         {
             const int selection_changes = (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
@@ -8573,14 +8580,17 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
             else
             {
                 // Append insertion + single sort likely be faster.
-                // Use req.RangeDirection to set order field so that Shift+Clicking from 1 to 5 is different than Shift+Clicking from 5 to 1
-                const int size_before_amends = _Storage.Data.Size;
-                int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? selection_changes - 1 : 0);
-                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
-                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
-                if (req.Selected)
-                    _SelectionOrder += selection_changes;
-                ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+				// Use req.RangeDirection to set order field so that Shift+Clicking from 1 to 5 is different than Shift+Clicking from 5 to 1
+				const int size_before_amends = _Storage.Data.Size;
+				int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? selection_changes - 1 : 0);
+				for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+				{
+					ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
+					selection_order += req.RangeDirection;
+				}
+				if (req.Selected)
+					_SelectionOrder += selection_changes;
+				ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
             }
         }
     }

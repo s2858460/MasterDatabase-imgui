@@ -2683,7 +2683,57 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
 #endif
 
     // 2. Rewrite channel list in our preferred order
-    if (merge_group_mask != 0)
+	if (merge_group_mask != 0)
+	{
+		// We skip channel 0 (Bg0/Bg1) and 1 (Bg2 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
+		const int LEADING_DRAW_CHANNELS = 2;
+		g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
+		ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
+		ImBitArraySetBitRange(remaining_mask, LEADING_DRAW_CHANNELS, splitter->_Count);
+		ImBitArrayClearBit(remaining_mask, table->Bg2DrawChannelUnfrozen);
+		IM_ASSERT(has_freeze_v == false || table->Bg2DrawChannelUnfrozen != TABLE_DRAW_CHANNEL_BG2_FROZEN);
+		int remaining_count = splitter->_Count - (has_freeze_v ? LEADING_DRAW_CHANNELS + 1 : LEADING_DRAW_CHANNELS);
+		ImRect host_rect = table->HostClipRect;
+
+		for (int merge_group_n = 0; merge_group_n < IM_COUNTOF(merge_groups); merge_group_n++)
+		{
+			int merge_channels_count = merge_groups[merge_group_n].ChannelsCount;
+			if (merge_channels_count)
+			{
+				MergeGroup* merge_group = &merge_groups[merge_group_n];
+				ImRect merge_clip_rect = merge_group->ClipRect;
+
+				if ((merge_group_n & 1) == 0 || !has_freeze_h)
+					merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, host_rect.Min.x);
+				if ((merge_group_n & 2) == 0 || !has_freeze_v)
+					merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, host_rect.Min.y);
+				if ((merge_group_n & 1) != 0)
+					merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, host_rect.Max.x);
+				if ((merge_group_n & 2) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
+					merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, host_rect.Max.y);
+
+				remaining_count -= merge_group->ChannelsCount;
+				for (int n = 0; n < (size_for_masks_bitarrays_one >> 2); n++)
+					remaining_mask[n] &= ~merge_group->ChannelsMask[n];
+
+				for (int n = 0; n < splitter->_Count && merge_channels_count != 0; n++)
+				{
+					if (!IM_BITARRAY_TESTBIT(merge_group->ChannelsMask, n))
+						continue;
+					IM_BITARRAY_CLEARBIT(merge_group->ChannelsMask, n);
+					merge_channels_count--;
+
+					ImDrawChannel* channel = &splitter->_Channels[n];
+					IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
+					channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
+					memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
+				}
+			}
+
+			if (merge_group_n == 1 && has_freeze_v)
+				memcpy(dst_tmp++, &splitter->_Channels[table->Bg2DrawChannelUnfrozen], sizeof(ImDrawChannel));
+		}
+	}
     {
         // We skip channel 0 (Bg0/Bg1) and 1 (Bg2 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
         const int LEADING_DRAW_CHANNELS = 2;
@@ -3229,16 +3279,23 @@ void ImGui::TableHeader(const char* label)
         table->InstanceInteracted = table->InstanceCurrent;
 
         // We don't reorder: through the frozen<>unfrozen line, or through a column that is marked with ImGuiTableColumnFlags_NoReorder.
-        if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
-            if (ImGuiTableColumn* prev_column = (column->PrevEnabledColumn != -1) ? &table->Columns[column->PrevEnabledColumn] : NULL)
-                if (!((column->Flags | prev_column->Flags) & ImGuiTableColumnFlags_NoReorder))
-                    if ((column->IndexWithinEnabledSet < table->FreezeColumnsRequest) == (prev_column->IndexWithinEnabledSet < table->FreezeColumnsRequest))
-                        table->ReorderColumnDir = -1;
+		if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
+		{
+			ImGuiTableColumn* prev_column = (column->PrevEnabledColumn != -1) ? &table->Columns[column->PrevEnabledColumn] : NULL;
+			if (prev_column)
+				if (!((column->Flags | prev_column->Flags) & ImGuiTableColumnFlags_NoReorder))
+					if ((column->IndexWithinEnabledSet < table->FreezeColumnsRequest) == (prev_column->IndexWithinEnabledSet < table->FreezeColumnsRequest))
+						table->ReorderColumnDir = -1;
+		}
+
         if (g.IO.MouseDelta.x > 0.0f && g.IO.MousePos.x > cell_r.Max.x)
-            if (ImGuiTableColumn* next_column = (column->NextEnabledColumn != -1) ? &table->Columns[column->NextEnabledColumn] : NULL)
-                if (!((column->Flags | next_column->Flags) & ImGuiTableColumnFlags_NoReorder))
-                    if ((column->IndexWithinEnabledSet < table->FreezeColumnsRequest) == (next_column->IndexWithinEnabledSet < table->FreezeColumnsRequest))
-                        table->ReorderColumnDir = +1;
+		{
+			ImGuiTableColumn* next_column = (column->NextEnabledColumn != -1) ? &table->Columns[column->NextEnabledColumn] : NULL;
+			if (next_column)
+				if (!((column->Flags | next_column->Flags) & ImGuiTableColumnFlags_NoReorder))
+					if ((column->IndexWithinEnabledSet < table->FreezeColumnsRequest) == (next_column->IndexWithinEnabledSet < table->FreezeColumnsRequest))
+						table->ReorderColumnDir = +1;
+		}
     }
 
     // Sort order arrow
@@ -3830,8 +3887,11 @@ static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandle
 {
     ImGuiContext& g = *ctx;
     for (int i = 0; i != g.Tables.GetMapSize(); i++)
-        if (ImGuiTable* table = g.Tables.TryGetMapData(i))
+    {
+        ImGuiTable* table = g.Tables.TryGetMapData(i);
+        if (table)
             table->SettingsOffset = -1;
+    }
     g.SettingsTables.clear();
 }
 
@@ -3840,11 +3900,14 @@ static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandle
 {
     ImGuiContext& g = *ctx;
     for (int i = 0; i != g.Tables.GetMapSize(); i++)
-        if (ImGuiTable* table = g.Tables.TryGetMapData(i))
+    {
+        ImGuiTable* table = g.Tables.TryGetMapData(i);
+        if (table)
         {
             table->IsSettingsRequestLoad = true;
             table->SettingsOffset = -1;
         }
+    }
 }
 
 static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
@@ -3854,7 +3917,8 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
 
-    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id))
+    ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id);
+    if (settings)
     {
         if (settings->ColumnsCountMax >= columns_count)
         {
@@ -4057,7 +4121,6 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
         BulletText("Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
     }
-    //BulletText("BgDrawChannels: %d/%d", 0, table->BgDrawChannelUnfrozen);
     float sum_weights = 0.0f;
     for (int n = 0; n < table->ColumnsCount; n++)
         if (table->Columns[n].Flags & ImGuiTableColumnFlags_WidthStretch)
@@ -4091,7 +4154,8 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255));
         }
     }
-    if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
+    ImGuiTableSettings* settings = TableGetBoundSettings(table);
+    if (settings)
         DebugNodeTableSettings(settings);
     if (clear_settings)
         table->IsResetAllRequest = true;

@@ -9406,8 +9406,11 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
         (key != ImGuiKey_None || key_chord == ImGuiKey_None) ? GetKeyName(key) : "");
     size_t len;
     if (key == ImGuiKey_None && key_chord != 0)
-        if ((len = ImStrlen(g.TempKeychordName)) != 0) // Remove trailing '+'
+    {
+        len = ImStrlen(g.TempKeychordName);
+        if (len != 0) // Remove trailing '+'
             g.TempKeychordName[len - 1] = 0;
+    }
     return g.TempKeychordName;
 }
 
@@ -15538,7 +15541,14 @@ void ImGui::ClearWindowSettings(const char* name)
         window->Flags |= ImGuiWindowFlags_NoSavedSettings;
         InitOrLoadWindowSettings(window, NULL);
     }
-    if (ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByID(ImHashStr(name)))
+
+    ImGuiWindowSettings* settings;
+    if (window)
+        settings = FindWindowSettingsByWindow(window);
+    else
+        settings = FindWindowSettingsByID(ImHashStr(name));
+
+    if (settings)
         settings->WantDelete = true;
 }
 

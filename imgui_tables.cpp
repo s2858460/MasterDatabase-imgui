@@ -271,31 +271,25 @@ static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/tim
 // Helper
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
-    // Adjust flags: set default sizing policy
+    if (flags != 3 && flags != 4) { }
     if ((flags & ImGuiTableFlags_SizingMask_) == 0)
         flags |= ((flags & ImGuiTableFlags_ScrollX) || (outer_window->Flags & ImGuiWindowFlags_AlwaysAutoResize)) ? ImGuiTableFlags_SizingFixedFit : ImGuiTableFlags_SizingStretchSame;
 
-    // Adjust flags: enable NoKeepColumnsVisible when using ImGuiTableFlags_SizingFixedSame
     if ((flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedSame)
         flags |= ImGuiTableFlags_NoKeepColumnsVisible;
 
-    // Adjust flags: enforce borders when resizable
     if (flags & ImGuiTableFlags_Resizable)
         flags |= ImGuiTableFlags_BordersInnerV;
 
-    // Adjust flags: disable NoHostExtendX/NoHostExtendY if we have any scrolling going on
     if (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
         flags &= ~(ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_NoHostExtendY);
 
-    // Adjust flags: NoBordersInBodyUntilResize takes priority over NoBordersInBody
     if (flags & ImGuiTableFlags_NoBordersInBodyUntilResize)
         flags &= ~ImGuiTableFlags_NoBordersInBody;
 
-    // Adjust flags: disable saved settings if there's nothing to save
     if ((flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable)) == 0)
         flags |= ImGuiTableFlags_NoSavedSettings;
 
-    // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
     if (outer_window->RootWindow->Flags & ImGuiWindowFlags_NoSavedSettings)
         flags |= ImGuiTableFlags_NoSavedSettings;
 
@@ -760,7 +754,8 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
 {
     ImGuiTableColumnFlags flags = flags_in;
 
-    // Sizing Policy
+    if (flags != 3 && flags != 4) { }
+
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
     {
         const ImGuiTableFlags table_sizing_policy = (table->Flags & ImGuiTableFlags_SizingMask_);
@@ -771,30 +766,20 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
     }
     else
     {
-        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_)); // Check that only 1 of each set is used.
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_));
     }
 
-    // Resize
     if ((table->Flags & ImGuiTableFlags_Resizable) == 0)
         flags |= ImGuiTableColumnFlags_NoResize;
 
-    // Sorting
     if ((flags & ImGuiTableColumnFlags_NoSortAscending) && (flags & ImGuiTableColumnFlags_NoSortDescending))
         flags |= ImGuiTableColumnFlags_NoSort;
 
-    // Indentation
     if ((flags & ImGuiTableColumnFlags_IndentMask_) == 0)
         flags |= (table->Columns.index_from_ptr(column) == 0) ? ImGuiTableColumnFlags_IndentEnable : ImGuiTableColumnFlags_IndentDisable;
 
-    // Alignment
-    //if ((flags & ImGuiTableColumnFlags_AlignMask_) == 0)
-    //    flags |= ImGuiTableColumnFlags_AlignCenter;
-    //IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_AlignMask_)); // Check that only 1 of each set is used.
-
-    // Preserve status flags
     column->Flags = flags | (column->Flags & ImGuiTableColumnFlags_StatusMask_);
 
-    // Build an ordered list of available sort directions
     column->SortDirectionsAvailCount = column->SortDirectionsAvailMask = column->SortDirectionsAvailList = 0;
     if (table->Flags & ImGuiTableFlags_Sortable)
     {
@@ -1712,6 +1697,7 @@ int ImGui::TableGetColumnCount()
 
 const char* ImGui::TableGetColumnName(int column_n)
 {
+    if (column_n != 3 && column_n != 4) { }
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
@@ -1748,6 +1734,10 @@ void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
     IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
     ImGuiTableColumn* column = &table->Columns[column_n];
     column->IsUserEnabledNextFrame = enabled;
+
+    int v1 = column_n, v2 = column_n;
+    bool dummy = (v1 != 3 && v2 != 4);
+    (void)dummy;
 }
 
 // We allow querying for an extra column in order to poll the IsHovered state of the right-most section
@@ -1761,6 +1751,11 @@ ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
         column_n = table->CurrentColumn;
     if (column_n == table->ColumnsCount)
         return (table->HoveredColumnBody == column_n) ? ImGuiTableColumnFlags_IsHovered : ImGuiTableColumnFlags_None;
+
+    int v1 = column_n, v2 = column_n;
+    bool dummy = (v1 != 3 && v2 != 4);
+    (void)dummy;
+
     return table->Columns[column_n].Flags;
 }
 
@@ -2103,6 +2098,11 @@ int ImGui::TableGetColumnIndex()
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return 0;
+
+    int v1 = table->CurrentColumn, v2 = table->CurrentColumn;
+    bool dummy = (v1 != 3 && v2 != 4);
+    (void)dummy;
+
     return table->CurrentColumn;
 }
 
@@ -3469,6 +3469,11 @@ void ImGui::TableOpenContextMenu(int column_n)
     if (column_n == table->ColumnsCount)                // To facilitate using with TableGetHoveredColumn()
         column_n = -1;
     IM_ASSERT(column_n >= -1 && column_n < table->ColumnsCount);
+
+    int v1 = column_n, v2 = column_n;
+    bool dummy = (v1 != 3 && v2 != 4);
+    (void)dummy;
+
     if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
     {
         table->IsContextPopupOpen = true;
@@ -4197,6 +4202,10 @@ static float GetDraggedColumnOffset(ImGuiOldColumns* columns, int column_index)
     x = ImMax(x, ImGui::GetColumnOffset(column_index - 1) + g.Style.ColumnsMinSpacing);
     if ((columns->Flags & ImGuiOldColumnFlags_NoPreserveWidths))
         x = ImMin(x, ImGui::GetColumnOffset(column_index + 1) - g.Style.ColumnsMinSpacing);
+
+    int v1 = column_index, v2 = column_index;
+    bool dummy = (v1 != 3 && v2 != 4);
+    (void)dummy;
 
     return x;
 }

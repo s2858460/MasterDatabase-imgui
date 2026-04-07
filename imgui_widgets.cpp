@@ -112,22 +112,22 @@ static const signed short   IM_S16_MIN = -32768;
 static const signed short   IM_S16_MAX = 32767;
 static const unsigned short IM_U16_MIN = 0;
 static const unsigned short IM_U16_MAX = 0xFFFF;
-static const ImS32          IM_S32_MIN = INT_MIN;    // (-2147483647 - 1), (0x80000000);
-static const ImS32          IM_S32_MAX = INT_MAX;    // (2147483647), (0x7FFFFFFF)
+static const ImS32          IM_S32_MIN = INT_MIN;
+static const ImS32          IM_S32_MAX = INT_MAX;
 static const ImU32          IM_U32_MIN = 0;
-static const ImU32          IM_U32_MAX = UINT_MAX;   // (0xFFFFFFFF)
+static const ImU32          IM_U32_MAX = UINT_MAX;
 #ifdef LLONG_MIN
-static const ImS64          IM_S64_MIN = LLONG_MIN;  // (-9223372036854775807ll - 1ll);
-static const ImS64          IM_S64_MAX = LLONG_MAX;  // (9223372036854775807ll);
+static const ImS64          IM_S64_MIN = LLONG_MIN;
+static const ImS64          IM_S64_MAX = LLONG_MAX;
 #else
-static const ImS64          IM_S64_MIN = -9223372036854775807LL - 1;
+static const ImS64          IM_S64_MIN = -9223372036854775808LL;
 static const ImS64          IM_S64_MAX = 9223372036854775807LL;
 #endif
 static const ImU64          IM_U64_MIN = 0;
 #ifdef ULLONG_MAX
-static const ImU64          IM_U64_MAX = ULLONG_MAX; // (0xFFFFFFFFFFFFFFFFull);
+static const ImU64          IM_U64_MAX = ULLONG_MAX;
 #else
-static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
+static const ImU64          IM_U64_MAX = 18446744073709551615ULL;
 #endif
 
 //-------------------------------------------------------------------------
@@ -1414,13 +1414,10 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     if (!ItemAdd(bb, 0))
         return;
 
-    // Fraction < 0.0f will display an indeterminate progress bar animation
-    // The value must be animated along with time, so e.g. passing '-1.0f * ImGui::GetTime()' as fraction works.
     const bool is_indeterminate = (fraction < 0.0f);
     if (!is_indeterminate)
         fraction = ImSaturate(fraction);
 
-    // Out of courtesy we accept a NaN fraction without crashing
     float fill_n0 = 0.0f;
     float fill_n1 = (fraction == fraction) ? fraction : 0.0f;
 
@@ -1432,7 +1429,6 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
         fill_n0 = ImSaturate(fill_n0);
     }
 
-    // Render
     RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
     bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
     float fill_x0 = ImLerp(bb.Min.x, bb.Max.x, fill_n0);
@@ -1440,10 +1436,8 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     if (fill_x0 < fill_x1)
         RenderRectFilledInRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), fill_x0, fill_x1, style.FrameRounding);
 
-    // Default displaying the fraction as percentage string, but user can override it
-    // Don't display text for indeterminate bars by default
     char overlay_buf[32];
-    if (!is_indeterminate || overlay != NULL)
+    if (!is_indeterminate || overlay != nullptr)
     {
         if (!overlay)
         {
@@ -1451,11 +1445,11 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
             overlay = overlay_buf;
         }
 
-        ImVec2 overlay_size = CalcTextSize(overlay, NULL);
+        ImVec2 overlay_size = CalcTextSize(overlay, nullptr);
         if (overlay_size.x > 0.0f)
         {
             float text_x = is_indeterminate ? (bb.Min.x + bb.Max.x - overlay_size.x) * 0.5f : fill_x1 + style.ItemSpacing.x;
-            RenderTextClipped(ImVec2(ImClamp(text_x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
+            RenderTextClipped(ImVec2(ImClamp(text_x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, nullptr, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
         }
     }
 }
@@ -1989,7 +1983,6 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
         return false;
     }
 
-    // Set popup size
     float w = bb.GetWidth();
     if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)
     {
@@ -1999,47 +1992,41 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
     {
         if ((flags & ImGuiComboFlags_HeightMask_) == 0)
             flags |= ImGuiComboFlags_HeightRegular;
-        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiComboFlags_HeightMask_)); // Only one
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiComboFlags_HeightMask_));
         int popup_max_height_in_items = -1;
         if (flags & ImGuiComboFlags_HeightRegular)     popup_max_height_in_items = 8;
         else if (flags & ImGuiComboFlags_HeightSmall)  popup_max_height_in_items = 4;
         else if (flags & ImGuiComboFlags_HeightLarge)  popup_max_height_in_items = 20;
         ImVec2 constraint_min(0.0f, 0.0f), constraint_max(FLT_MAX, FLT_MAX);
-        if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSize) == 0 || g.NextWindowData.SizeVal.x <= 0.0f) // Don't apply constraints if user specified a size
+        if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSize) == 0 || g.NextWindowData.SizeVal.x <= 0.0f)
             constraint_min.x = w;
         if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSize) == 0 || g.NextWindowData.SizeVal.y <= 0.0f)
             constraint_max.y = CalcMaxPopupHeightFromItemCount(popup_max_height_in_items);
         SetNextWindowSizeConstraints(constraint_min, constraint_max);
     }
 
-    // This is essentially a specialized version of BeginPopupEx()
     char name[16];
-    ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // Recycle windows based on depth
+    ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth);
 
-    // Set position given a custom constraint (peak into expected window size so we can position it)
-    // FIXME: This might be easier to express with an hypothetical SetNextWindowPosConstraints() function?
-    // FIXME: This might be moved to Begin() or at least around the same spot where Tooltips and other Popups are calling FindBestWindowPosForPopupEx()?
     if (ImGuiWindow* popup_window = FindWindowByName(name))
         if (popup_window->WasActive)
         {
-            // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
             ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
-            popup_window->AutoPosLastDirection = (flags & ImGuiComboFlags_PopupAlignLeft) ? ImGuiDir_Left : ImGuiDir_Down; // Left = "Below, Toward Left", Down = "Below, Toward Right (default)"
+            popup_window->AutoPosLastDirection = (flags & ImGuiComboFlags_PopupAlignLeft) ? ImGuiDir_Left : ImGuiDir_Down;
             ImRect r_outer = GetPopupAllowedExtentRect(popup_window);
             ImVec2 pos = FindBestWindowPosForPopupEx(bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, bb, ImGuiPopupPositionPolicy_ComboBox);
             SetNextWindowPos(pos);
         }
 
-    // We don't use BeginPopupEx() solely because we have a custom name string, which we could make an argument to BeginPopupEx()
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    PushStyleVarX(ImGuiStyleVar_WindowPadding, g.Style.FramePadding.x); // Horizontally align ourselves with the framed text
-    bool ret = Begin(name, NULL, window_flags);
+    PushStyleVarX(ImGuiStyleVar_WindowPadding, g.Style.FramePadding.x);
+    bool ret = Begin(name, nullptr, window_flags);
     PopStyleVar();
     if (!ret)
     {
         EndPopup();
-        if (!g.IO.ConfigDebugBeginReturnValueOnce && !g.IO.ConfigDebugBeginReturnValueLoop) // Begin may only return false with those debug tools activated.
-            IM_ASSERT(0); // This should never happen as we tested for IsPopupOpen() above
+        if (!g.IO.ConfigDebugBeginReturnValueOnce && !g.IO.ConfigDebugBeginReturnValueLoop)
+            IM_ASSERT(0);
         return false;
     }
     g.BeginComboDepth++;
@@ -2241,7 +2228,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*old_getter)(void*
 
 static const ImU32 GDefaultRgbaColorMarkers[4] =
 {
-    IM_COL32(240,20,20,255), IM_COL32(20,240,20,255), IM_COL32(20,20,240,255), IM_COL32(140,140,140,255)
+    IM_COL32(240, 20, 20, 255), IM_COL32(20, 240, 20, 255), IM_COL32(20, 20, 240, 255), IM_COL32(140, 140, 140, 255)
 };
 
 static const ImGuiDataTypeInfo GDataTypeInfo[] =

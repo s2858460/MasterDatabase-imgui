@@ -3622,7 +3622,8 @@ void ImParseFormatSanitizeForPrinting(const char* fmt_in, char* fmt_out, size_t 
     IM_ASSERT((size_t)(fmt_end - fmt_in + 1) < fmt_out_size); // Format is too long, let us know if this happens to you!
     while (fmt_in < fmt_end)
     {
-        char c = *fmt_in++;
+        char c = *fmt_in;
+        fmt_in += 1;
         if (c != '\'' && c != '$' && c != '_') // Custom flags provided by stb_sprintf.h. POSIX 2008 also supports '.
             *(fmt_out++) = c;
     }
@@ -3639,7 +3640,8 @@ const char* ImParseFormatSanitizeForScanning(const char* fmt_in, char* fmt_out, 
     bool has_type = false;
     while (fmt_in < fmt_end)
     {
-        char c = *fmt_in++;
+        char c = *fmt_in;
+        fmt_in += 1;
         if (!has_type && ((c >= '0' && c <= '9') || c == '.' || c == '+' || c == '#'))
             continue;
         has_type |= ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')); // Stop skipping digits
@@ -3654,11 +3656,14 @@ template<typename TYPE>
 static const char* ImAtoi(const char* src, TYPE* output)
 {
     int negative = 0;
-    if (*src == '-') { negative = 1; src++; }
-    if (*src == '+') { src++; }
+    if (*src == '-') { negative = 1; src += 1; }
+    if (*src == '+') { src += 1; }
     TYPE v = 0;
     while (*src >= '0' && *src <= '9')
-        v = (v * 10) + (*src++ - '0');
+    {
+        v = (v * 10) + (*src - '0');
+        src += 1;
+    }
     *output = negative ? -v : v;
     return src;
 }
@@ -4566,7 +4571,8 @@ static int* ImLowerBound(int* in_begin, int* in_end, int v)
         int* mid = in_p + count2;
         if (*mid < v)
         {
-            in_p = ++mid;
+            in_p = mid;
+            in_p += 1;
             count -= count2 + 1;
         }
         else
@@ -4586,34 +4592,49 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
     const char* s;
     if (flags & ImGuiInputTextFlags_WordWrap)
     {
-        for (s = buf; s < buf_end; s = (*s == '\n') ? s + 1 : s)
-        {
-            if (size++ <= max_output_buffer_size)
-                line_index->Offsets.push_back((int)(s - buf));
-            s = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, s, buf_end, wrap_width, ImDrawTextFlags_WrapKeepBlanks);
-        }
+        for (s = buf; s < buf_end; )
+		{
+			if (size <= max_output_buffer_size)
+				line_index->Offsets.push_back((int)(s - buf));
+			size += 1;
+
+			const char* next_s = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, s, buf_end, wrap_width, ImDrawTextFlags_WrapKeepBlanks);
+			if (*next_s == '\n')
+				s = next_s + 1;
+			else
+				s = next_s;
+		}
     }
     else if (buf_end != NULL)
     {
-        for (s = buf; s < buf_end; s = s ? s + 1 : buf_end)
-        {
-            if (size++ <= max_output_buffer_size)
-                line_index->Offsets.push_back((int)(s - buf));
-            s = (const char*)ImMemchr(s, '\n', buf_end - s);
-        }
+        for (s = buf; s < buf_end; )
+		{
+			if (size <= max_output_buffer_size)
+				line_index->Offsets.push_back((int)(s - buf));
+			size += 1;
+
+			const char* next_s = (const char*)ImMemchr(s, '\n', buf_end - s);
+			s = next_s;
+		}
     }
     else
     {
         const char* s_eol;
-        for (s = buf; ; s = s_eol + 1)
-        {
-            if (size++ <= max_output_buffer_size)
-                line_index->Offsets.push_back((int)(s - buf));
-            if ((s_eol = strchr(s, '\n')) != NULL)
-                continue;
-            s += strlen(s);
-            break;
-        }
+		for (s = buf; ; )
+		{
+			if (size <= max_output_buffer_size)
+				line_index->Offsets.push_back((int)(s - buf));
+			size += 1;
+
+			s_eol = strchr(s, '\n');
+			if (s_eol != NULL)
+				s = s_eol + 1;
+			else
+			{
+				s += strlen(s);
+				break;
+			}
+		}
     }
     if (out_buf_end != NULL)
         *out_buf_end = buf_end = s;
@@ -7597,8 +7618,14 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
 static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
 {
     int match_len = 0;
-    while (s1 < s1_end && ImToUpper(*s1++) == ImToUpper(*s2++))
-        match_len++;
+    while (s1 < s1_end)
+    {
+        if (ImToUpper(*s1) != ImToUpper(*s2))
+            break;
+        match_len += 1;
+        s1 += 1;
+        s2 += 1;
+    }
     return match_len;
 }
 

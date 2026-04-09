@@ -2862,22 +2862,30 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     else if (src_fmt == ImTextureFormat_Alpha8 && dst_fmt == ImTextureFormat_RGBA32)
     {
         for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
-        {
-            const ImU8* src_p = (const ImU8*)src_pixels;
-            ImU32* dst_p = (ImU32*)(void*)dst_pixels;
-            for (int nx = w; nx > 0; nx--)
-                *dst_p++ = IM_COL32(255, 255, 255, (unsigned int)(*src_p++));
-        }
+		{
+			const ImU8* src_p = (const ImU8*)src_pixels;
+			ImU32* dst_p = (ImU32*)(void*)dst_pixels;
+			for (int nx = w; nx > 0; nx--)
+			{
+				*dst_p = IM_COL32(255, 255, 255, (unsigned int)(*src_p));
+				dst_p += 1;
+				src_p += 1;
+			}
+		}
     }
     else if (src_fmt == ImTextureFormat_RGBA32 && dst_fmt == ImTextureFormat_Alpha8)
     {
         for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
-        {
-            const ImU32* src_p = (const ImU32*)(void*)src_pixels;
-            ImU8* dst_p = (ImU8*)dst_pixels;
-            for (int nx = w; nx > 0; nx--)
-                *dst_p++ = ((*src_p++) >> IM_COL32_A_SHIFT) & 0xFF;
-        }
+		{
+			const ImU32* src_p = (const ImU32*)(void*)src_pixels;
+			ImU8* dst_p = (ImU8*)dst_pixels;
+			for (int nx = w; nx > 0; nx--)
+			{
+				*dst_p = ((*src_p) >> IM_COL32_A_SHIFT) & 0xFF;
+				dst_p += 1;
+				src_p += 1;
+			}
+		}
     }
     else
     {
@@ -6188,7 +6196,12 @@ static void stb__match(const unsigned char *data, unsigned int length)
     IM_ASSERT(stb__dout + length <= stb__barrier_out_e);
     if (stb__dout + length > stb__barrier_out_e) { stb__dout += length; return; }
     if (data < stb__barrier_out_b) { stb__dout = stb__barrier_out_e+1; return; }
-    while (length--) *stb__dout++ = *data++;
+    while (length--)
+    {
+        *stb__dout = *data;
+        stb__dout += 1;
+        data += 1;
+    }
 }
 
 static void stb__lit(const unsigned char *data, unsigned int length)

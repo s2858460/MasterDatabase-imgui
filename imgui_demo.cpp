@@ -1488,25 +1488,47 @@ static void DemoWindowWidgetsDataTypes()
         ImGui::SliderScalar("slider u64 reverse",   ImGuiDataType_U64,  &u64_v, &u64_fifty, &u64_zero, "%" PRIu64 " ms");
 
         IMGUI_DEMO_MARKER("Widgets/Data Types/Inputs");
-        static bool inputs_step = true;
-        static ImGuiInputTextFlags flags = ImGuiInputTextFlags_None;
-        ImGui::SeparatorText("Inputs");
-        ImGui::Checkbox("Show step buttons", &inputs_step);
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_ParseEmptyRefVal", &flags, ImGuiInputTextFlags_ParseEmptyRefVal);
-        ImGui::CheckboxFlags("ImGuiInputTextFlags_DisplayEmptyRefVal", &flags, ImGuiInputTextFlags_DisplayEmptyRefVal);
-        ImGui::InputScalar("input s8",      ImGuiDataType_S8,     &s8_v,  inputs_step ? &s8_one  : NULL, NULL, "%d", flags);
-        ImGui::InputScalar("input u8",      ImGuiDataType_U8,     &u8_v,  inputs_step ? &u8_one  : NULL, NULL, "%u", flags);
-        ImGui::InputScalar("input s16",     ImGuiDataType_S16,    &s16_v, inputs_step ? &s16_one : NULL, NULL, "%d", flags);
-        ImGui::InputScalar("input u16",     ImGuiDataType_U16,    &u16_v, inputs_step ? &u16_one : NULL, NULL, "%u", flags);
-        ImGui::InputScalar("input s32",     ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%d", flags);
-        ImGui::InputScalar("input s32 hex", ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%04X", flags);
-        ImGui::InputScalar("input u32",     ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%u", flags);
-        ImGui::InputScalar("input u32 hex", ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%08X", flags);
-        ImGui::InputScalar("input s64",     ImGuiDataType_S64,    &s64_v, inputs_step ? &s64_one : NULL, NULL, NULL, flags);
-        ImGui::InputScalar("input u64",     ImGuiDataType_U64,    &u64_v, inputs_step ? &u64_one : NULL, NULL, NULL, flags);
-        ImGui::InputScalar("input float",   ImGuiDataType_Float,  &f32_v, inputs_step ? &f32_one : NULL, NULL, NULL, flags);
-        ImGui::InputScalar("input double",  ImGuiDataType_Double, &f64_v, inputs_step ? &f64_one : NULL, NULL, NULL, flags);
+		static bool inputs_step = true;
+		static ImGuiInputTextFlags flags = ImGuiInputTextFlags_None;
+		ImGui::SeparatorText("Inputs");
+		ImGui::Checkbox("Show step buttons", &inputs_step);
+		ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
+		ImGui::CheckboxFlags("ImGuiInputTextFlags_ParseEmptyRefVal", &flags, ImGuiInputTextFlags_ParseEmptyRefVal);
+		ImGui::CheckboxFlags("ImGuiInputTextFlags_DisplayEmptyRefVal", &flags, ImGuiInputTextFlags_DisplayEmptyRefVal);
+
+		const void* step_s8 = NULL;
+		if (inputs_step) step_s8 = &s8_one;
+		const void* step_u8 = NULL;
+		if (inputs_step) step_u8 = &u8_one;
+		const void* step_s16 = NULL;
+		if (inputs_step) step_s16 = &s16_one;
+		const void* step_u16 = NULL;
+		if (inputs_step) step_u16 = &u16_one;
+		const void* step_s32 = NULL;
+		if (inputs_step) step_s32 = &s32_one;
+		const void* step_u32 = NULL;
+		if (inputs_step) step_u32 = &u32_one;
+		const void* step_s64 = NULL;
+		if (inputs_step) step_s64 = &s64_one;
+		const void* step_u64 = NULL;
+		if (inputs_step) step_u64 = &u64_one;
+		const void* step_f32 = NULL;
+		if (inputs_step) step_f32 = &f32_one;
+		const void* step_f64 = NULL;
+		if (inputs_step) step_f64 = &f64_one;
+
+		ImGui::InputScalar("input s8",      ImGuiDataType_S8,     &s8_v,  step_s8,  NULL, "%d", flags);
+		ImGui::InputScalar("input u8",      ImGuiDataType_U8,     &u8_v,  step_u8,  NULL, "%u", flags);
+		ImGui::InputScalar("input s16",     ImGuiDataType_S16,    &s16_v, step_s16, NULL, "%d", flags);
+		ImGui::InputScalar("input u16",     ImGuiDataType_U16,    &u16_v, step_u16, NULL, "%u", flags);
+		ImGui::InputScalar("input s32",     ImGuiDataType_S32,    &s32_v, step_s32, NULL, "%d", flags);
+		ImGui::InputScalar("input s32 hex", ImGuiDataType_S32,    &s32_v, step_s32, NULL, "%04X", flags);
+		ImGui::InputScalar("input u32",     ImGuiDataType_U32,    &u32_v, step_u32, NULL, "%u", flags);
+		ImGui::InputScalar("input u32 hex", ImGuiDataType_U32,    &u32_v, step_u32, NULL, "%08X", flags);
+		ImGui::InputScalar("input s64",     ImGuiDataType_S64,    &s64_v, step_s64, NULL, NULL, flags);
+		ImGui::InputScalar("input u64",     ImGuiDataType_U64,    &u64_v, step_u64, NULL, NULL, flags);
+		ImGui::InputScalar("input float",   ImGuiDataType_Float,  &f32_v, step_f32, NULL, NULL, flags);
+		ImGui::InputScalar("input double",  ImGuiDataType_Double, &f64_v, step_f64, NULL, NULL, flags);
 
         ImGui::TreePop();
     }
@@ -1654,32 +1676,38 @@ static void DemoWindowWidgetsDragAndDrop()
         }
 
         IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Tooltip at target location");
-        if (ImGui::TreeNode("Tooltip at target location"))
-        {
-            for (int n = 0; n < 2; n++)
-            {
-                // Drop targets
-                ImGui::Button(n ? "drop here##1" : "drop here##0");
-                if (ImGui::BeginDragDropTarget())
-                {
-                    ImGuiDragDropFlags drop_target_flags = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoPreviewTooltip;
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, drop_target_flags))
-                    {
-                        IM_UNUSED(payload);
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
-                        ImGui::SetTooltip("Cannot drop here!");
-                    }
-                    ImGui::EndDragDropTarget();
-                }
+		if (ImGui::TreeNode("Tooltip at target location"))
+		{
+			for (int n = 0; n < 2; n++)
+			{
+				// Drop targets
+				const char* button_label;
+				if (n != 0)
+					button_label = "drop here##1";
+				else
+					button_label = "drop here##0";
 
-                // Drop source
-                static ImVec4 col4 = { 1.0f, 0.0f, 0.2f, 1.0f };
-                if (n == 0)
-                    ImGui::ColorButton("drag me", col4);
+				ImGui::Button(button_label);
 
-            }
-            ImGui::TreePop();
-        }
+				if (ImGui::BeginDragDropTarget())
+				{
+					ImGuiDragDropFlags drop_target_flags = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoPreviewTooltip;
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, drop_target_flags))
+					{
+						IM_UNUSED(payload);
+						ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+						ImGui::SetTooltip("Cannot drop here!");
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				// Drop source
+				static ImVec4 col4 = { 1.0f, 0.0f, 0.2f, 1.0f };
+				if (n == 0)
+					ImGui::ColorButton("drag me", col4);
+			}
+			ImGui::TreePop();
+		}
 
         ImGui::TreePop();
     }
@@ -3293,110 +3321,108 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
 
                 while (!use_clipper || clipper.Step())
                 {
-                    const int item_begin = use_clipper ? clipper.DisplayStart : 0;
-                    const int item_end = use_clipper ? clipper.DisplayEnd : items.Size;
-                    for (int n = item_begin; n < item_end; n++)
-                    {
-                        if (show_in_table)
-                            ImGui::TableNextColumn();
+                    int item_begin;
+					if (use_clipper)
+						item_begin = clipper.DisplayStart;
+					else
+						item_begin = 0;
 
-                        const int item_id = items[n];
-                        const char* item_category = ExampleNames[item_id % IM_COUNTOF(ExampleNames)];
-                        char label[64];
-                        sprintf(label, "Object %05d: %s", item_id, item_category);
+					int item_end;
+					if (use_clipper)
+						item_end = clipper.DisplayEnd;
+					else
+						item_end = items.Size;
 
-                        // IMPORTANT: for deletion refocus to work we need object ID to be stable,
-                        // aka not depend on their index in the list. Here we use our persistent item_id
-                        // instead of index to build a unique ID that will persist.
-                        // (If we used PushID(index) instead, focus wouldn't be restored correctly after deletion).
-                        ImGui::PushID(item_id);
+					for (int n = item_begin; n < item_end; n++)
+					{
+						if (show_in_table)
+							ImGui::TableNextColumn();
 
-                        // Emit a color button, to test that Shift+LeftArrow landing on an item that is not part
-                        // of the selection scope doesn't erroneously alter our selection.
-                        if (show_color_button)
-                        {
-                            ImU32 dummy_col = (ImU32)((unsigned int)n * 0xC250B74B) | IM_COL32_A_MASK;
-                            ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
-                            ImGui::SameLine();
-                        }
+						const int item_id = items[n];
+						const char* item_category = ExampleNames[item_id % IM_COUNTOF(ExampleNames)];
+						char label[64];
+						sprintf(label, "Object %05d: %s", item_id, item_category);
 
-                        // Submit item
-                        bool item_is_selected = selection.Contains((ImGuiID)n);
-                        bool item_is_open = false;
-                        ImGui::SetNextItemSelectionUserData(n);
-                        if (widget_type == WidgetType_Selectable)
-                        {
-                            ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_None);
-                        }
-                        else if (widget_type == WidgetType_TreeNode)
-                        {
-                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-                            if (item_is_selected)
-                                tree_node_flags |= ImGuiTreeNodeFlags_Selected;
-                            item_is_open = ImGui::TreeNodeEx(label, tree_node_flags);
-                        }
+						ImGui::PushID(item_id);
 
-                        // Focus (for after deletion)
-                        if (item_curr_idx_to_focus == n)
-                            ImGui::SetKeyboardFocusHere(-1);
+						if (show_color_button)
+						{
+							ImU32 dummy_col = (ImU32)((unsigned int)n * 0xC250B74B) | IM_COL32_A_MASK;
+							ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
+							ImGui::SameLine();
+						}
 
-                        // Drag and Drop
-                        if (use_drag_drop && ImGui::BeginDragDropSource())
-                        {
-                            // Create payload with full selection OR single unselected item.
-                            // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
-                            if (ImGui::GetDragDropPayload() == NULL)
-                            {
-                                ImVector<int> payload_items;
-                                void* it = NULL;
-                                ImGuiID id = 0;
-                                if (!item_is_selected)
-                                    payload_items.push_back(item_id);
-                                else
-                                    while (selection.GetNextSelectedItem(&it, &id))
-                                        payload_items.push_back((int)id);
-                                ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
-                            }
+						bool item_is_selected = selection.Contains((ImGuiID)n);
+						bool item_is_open = false;
+						ImGui::SetNextItemSelectionUserData(n);
 
-                            // Display payload content in tooltip
-                            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-                            const int* payload_items = (int*)payload->Data;
-                            const int payload_count = (int)payload->DataSize / (int)sizeof(int);
-                            if (payload_count == 1)
-                                ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_COUNTOF(ExampleNames)]);
-                            else
-                                ImGui::Text("Dragging %d objects", payload_count);
+						if (widget_type == WidgetType_Selectable)
+						{
+							ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_None);
+						}
+						else if (widget_type == WidgetType_TreeNode)
+						{
+							ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+							if (item_is_selected)
+								tree_node_flags |= ImGuiTreeNodeFlags_Selected;
+							item_is_open = ImGui::TreeNodeEx(label, tree_node_flags);
+						}
 
-                            ImGui::EndDragDropSource();
-                        }
+						if (item_curr_idx_to_focus == n)
+							ImGui::SetKeyboardFocusHere(-1);
 
-                        if (widget_type == WidgetType_TreeNode && item_is_open)
-                            ImGui::TreePop();
+						if (use_drag_drop && ImGui::BeginDragDropSource())
+						{
+							if (ImGui::GetDragDropPayload() == NULL)
+							{
+								ImVector<int> payload_items;
+								void* it = NULL;
+								ImGuiID id = 0;
+								if (!item_is_selected)
+									payload_items.push_back(item_id);
+								else
+									while (selection.GetNextSelectedItem(&it, &id))
+										payload_items.push_back((int)id);
+								ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+							}
 
-                        // Right-click: context menu
-                        if (ImGui::BeginPopupContextItem())
-                        {
-                            ImGui::BeginDisabled(!use_deletion || selection.Size == 0);
-                            sprintf(label, "Delete %d item(s)###DeleteSelected", selection.Size);
-                            if (ImGui::Selectable(label))
-                                request_deletion_from_menu = true;
-                            ImGui::EndDisabled();
-                            ImGui::Selectable("Close");
-                            ImGui::EndPopup();
-                        }
+							const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+							const int* payload_items = (int*)payload->Data;
+							const int payload_count = (int)payload->DataSize / (int)sizeof(int);
 
-                        // Demo content within a table
-                        if (show_in_table)
-                        {
-                            ImGui::TableNextColumn();
-                            ImGui::SetNextItemWidth(-FLT_MIN);
-                            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                            ImGui::InputText("##NoLabel", (char*)(void*)item_category, strlen(item_category), ImGuiInputTextFlags_ReadOnly);
-                            ImGui::PopStyleVar();
-                        }
+							if (payload_count == 1)
+								ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_COUNTOF(ExampleNames)]);
+							else
+								ImGui::Text("Dragging %d objects", payload_count);
 
-                        ImGui::PopID();
-                    }
+							ImGui::EndDragDropSource();
+						}
+
+						if (widget_type == WidgetType_TreeNode && item_is_open)
+							ImGui::TreePop();
+
+						if (ImGui::BeginPopupContextItem())
+						{
+							ImGui::BeginDisabled(!use_deletion || selection.Size == 0);
+							sprintf(label, "Delete %d item(s)###DeleteSelected", selection.Size);
+							if (ImGui::Selectable(label))
+								request_deletion_from_menu = true;
+							ImGui::EndDisabled();
+							ImGui::Selectable("Close");
+							ImGui::EndPopup();
+						}
+
+						if (show_in_table)
+						{
+							ImGui::TableNextColumn();
+							ImGui::SetNextItemWidth(-FLT_MIN);
+							ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+							ImGui::InputText("##NoLabel", (char*)(void*)item_category, strlen(item_category), ImGuiInputTextFlags_ReadOnly);
+							ImGui::PopStyleVar();
+						}
+
+						ImGui::PopID();
+					}
                     if (!use_clipper)
                         break;
                 }
@@ -6244,19 +6270,40 @@ static void DemoWindowTables()
                 int row = ImGui::TableGetRowIndex();
 
                 ImGui::PushID(cell);
-                char label[32];
-                static char text_buf[32] = "";
-                sprintf(label, "Hello %d,%d", column, row);
-                switch (contents_type)
-                {
-                case CT_ShortText:  ImGui::TextUnformatted(label); break;
-                case CT_LongText:   ImGui::Text("Some %s text %d,%d\nOver two lines..", column == 0 ? "long" : "longeeer", column, row); break;
-                case CT_ShowWidth:  ImGui::Text("W: %.1f", ImGui::GetContentRegionAvail().x); break;
-                case CT_Button:     ImGui::Button(label); break;
-                case CT_FillButton: ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
-                case CT_InputText:  ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_COUNTOF(text_buf)); break;
-                }
-                ImGui::PopID();
+				char label[32];
+				static char text_buf[32] = "";
+				sprintf(label, "Hello %d,%d", column, row);
+				switch (contents_type)
+				{
+				case CT_ShortText:
+					ImGui::TextUnformatted(label);
+					break;
+				case CT_LongText:
+				{
+					const char* text_variant;
+					if (column == 0)
+						text_variant = "long";
+					else
+						text_variant = "longeeer";
+
+					ImGui::Text("Some %s text %d,%d\nOver two lines..", text_variant, column, row);
+					break;
+				}
+				case CT_ShowWidth:
+					ImGui::Text("W: %.1f", ImGui::GetContentRegionAvail().x);
+					break;
+				case CT_Button:
+					ImGui::Button(label);
+					break;
+				case CT_FillButton:
+					ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f));
+					break;
+				case CT_InputText:
+					ImGui::SetNextItemWidth(-FLT_MIN);
+					ImGui::InputText("##", text_buf, IM_COUNTOF(text_buf));
+					break;
+				}
+				ImGui::PopID();
             }
             ImGui::EndTable();
         }
@@ -6750,12 +6797,21 @@ static void DemoWindowTables()
                 ImGui::TableNextRow();
 
                 // Demonstrate setting a row background color with 'ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBgX, ...)'
-                // We use a transparent color so we can see the one behind in case our target is RowBg1 and RowBg0 was already targeted by the ImGuiTableFlags_RowBg flag.
-                if (row_bg_type != 0)
-                {
-                    ImU32 row_bg_color = ImGui::GetColorU32(row_bg_type == 1 ? ImVec4(0.7f, 0.3f, 0.3f, 0.65f) : ImVec4(0.2f + row * 0.1f, 0.2f, 0.2f, 0.65f)); // Flat or Gradient?
-                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0 + row_bg_target, row_bg_color);
-                }
+				if (row_bg_type != 0)
+				{
+					ImVec4 color;
+					if (row_bg_type == 1)
+					{
+						color = ImVec4(0.7f, 0.3f, 0.3f, 0.65f);
+					}
+					else
+					{
+						color = ImVec4(0.2f + row * 0.1f, 0.2f, 0.2f, 0.65f);
+					}
+
+					ImU32 row_bg_color = ImGui::GetColorU32(color);
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0 + row_bg_target, row_bg_color);
+				}
 
                 // Fill cells
                 for (int column = 0; column < 5; column++)
@@ -7430,13 +7486,19 @@ static void DemoWindowTables()
         {
             items.resize(items_count, MyItem());
             for (int n = 0; n < items_count; n++)
-            {
-                const int template_n = n % IM_COUNTOF(template_items_names);
-                MyItem& item = items[n];
-                item.ID = n;
-                item.Name = template_items_names[template_n];
-                item.Quantity = (template_n == 3) ? 10 : (template_n == 4) ? 20 : 0; // Assign default quantities
-            }
+			{
+				const int template_n = n % IM_COUNTOF(template_items_names);
+				MyItem& item = items[n];
+				item.ID = n;
+				item.Name = template_items_names[template_n];
+
+				if (template_n == 3)
+					item.Quantity = 10;
+				else if (template_n == 4)
+					item.Quantity = 20;
+				else
+					item.Quantity = 0;
+			}
         }
 
         const ImDrawList* parent_draw_list = ImGui::GetWindowDrawList();
@@ -7517,22 +7579,27 @@ static void DemoWindowTables()
                         ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f));
                     else if (contents_type == CT_Selectable || contents_type == CT_SelectableSpanRow)
                     {
-                        ImGuiSelectableFlags selectable_flags = (contents_type == CT_SelectableSpanRow) ? ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap : ImGuiSelectableFlags_None;
-                        if (ImGui::Selectable(label, item_is_selected, selectable_flags, ImVec2(0, row_min_height)))
-                        {
-                            if (ImGui::GetIO().KeyCtrl)
-                            {
-                                if (item_is_selected)
-                                    selection.find_erase_unsorted(item->ID);
-                                else
-                                    selection.push_back(item->ID);
-                            }
-                            else
-                            {
-                                selection.clear();
-                                selection.push_back(item->ID);
-                            }
-                        }
+                        ImGuiSelectableFlags selectable_flags;
+						if (contents_type == CT_SelectableSpanRow)
+							selectable_flags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap;
+						else
+							selectable_flags = ImGuiSelectableFlags_None;
+
+						if (ImGui::Selectable(label, item_is_selected, selectable_flags, ImVec2(0, row_min_height)))
+						{
+							if (ImGui::GetIO().KeyCtrl)
+							{
+								if (item_is_selected)
+									selection.find_erase_unsorted(item->ID);
+								else
+									selection.push_back(item->ID);
+							}
+							else
+							{
+								selection.clear();
+								selection.push_back(item->ID);
+							}
+						}
                     }
 
                     if (ImGui::TableSetColumnIndex(1))
@@ -7957,8 +8024,13 @@ static void DemoWindowInputs()
             ImGui::Separator();
 
             // 1: Window polling for Ctrl+A
-            ImGui::Text("(in WindowA)");
-            ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
+			ImGui::Text("(in WindowA)");
+			const char* shortcut_state_a;
+			if (ImGui::Shortcut(key_chord, flags))
+				shortcut_state_a = "PRESSED";
+			else
+				shortcut_state_a = "...";
+			ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), shortcut_state_a);
 
             // 2: InputText also polling for Ctrl+A: it always uses _RouteFocused internally (gets priority when active)
             // (Commented because the owner-aware version of Shortcut() is still in imgui_internal.h)
@@ -7976,10 +8048,15 @@ static void DemoWindowInputs()
             ImGui::EndChild();
 
             // 4: Child window polling for Ctrl+A. It is deeper than WindowA and gets priority when focused.
-            ImGui::BeginChild("ChildE", ImVec2(-FLT_MIN, line_height * 4), true);
-            ImGui::Text("(in ChildE: using same Shortcut)");
-            ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
-            ImGui::EndChild();
+			ImGui::BeginChild("ChildE", ImVec2(-FLT_MIN, line_height * 4), true);
+			ImGui::Text("(in ChildE: using same Shortcut)");
+			const char* shortcut_state_b;
+			if (ImGui::Shortcut(key_chord, flags))
+				shortcut_state_b = "PRESSED";
+			else
+				shortcut_state_b = "...";
+			ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), shortcut_state_b);
+			ImGui::EndChild();
 
             // 5: In a popup
             if (ImGui::Button("Open Popup"))
@@ -8007,11 +8084,16 @@ static void DemoWindowInputs()
             IM_ASSERT(IM_COUNTOF(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
 
             ImGuiMouseCursor current = ImGui::GetMouseCursor();
-            const char* cursor_name = (current >= ImGuiMouseCursor_Arrow) && (current < ImGuiMouseCursor_COUNT) ? mouse_cursors_names[current] : "N/A";
-            ImGui::Text("Current mouse cursor = %d: %s", current, cursor_name);
-            ImGui::BeginDisabled(true);
-            ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
-            ImGui::EndDisabled();
+			const char* cursor_name;
+			if (current >= ImGuiMouseCursor_Arrow && current < ImGuiMouseCursor_COUNT)
+				cursor_name = mouse_cursors_names[current];
+			else
+				cursor_name = "N/A";
+			ImGui::Text("Current mouse cursor = %d: %s", current, cursor_name);
+
+			ImGui::BeginDisabled(true);
+			ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
+			ImGui::EndDisabled();
 
             ImGui::Text("Hover to see mouse cursors:");
             ImGui::SameLine(); HelpMarker(
@@ -9795,10 +9877,22 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         ImVec2 work_size = viewport->WorkSize;
         ImVec2 window_pos, window_pos_pivot;
-        window_pos.x = (location & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
-        window_pos.y = (location & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
-        window_pos_pivot.x = (location & 1) ? 1.0f : 0.0f;
-        window_pos_pivot.y = (location & 2) ? 1.0f : 0.0f;
+        if (location & 1)
+            window_pos.x = work_pos.x + work_size.x - PAD;
+        else
+            window_pos.x = work_pos.x + PAD;
+        if (location & 2)
+            window_pos.y = work_pos.y + work_size.y - PAD;
+        else
+            window_pos.y = work_pos.y + PAD;
+        if (location & 1)
+            window_pos_pivot.x = 1.0f;
+        else
+            window_pos_pivot.x = 0.0f;
+        if (location & 2)
+            window_pos_pivot.y = 1.0f;
+        else
+            window_pos_pivot.y = 0.0f;
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
         window_flags |= ImGuiWindowFlags_NoMove;
     }
@@ -10617,14 +10711,23 @@ struct ExampleAssetsBrowser
         AddItems(10000);
     }
     void AddItems(int count)
-    {
-        if (Items.Size == 0)
-            NextItemId = 0;
-        Items.reserve(Items.Size + count);
-        for (int n = 0; n < count; n++, NextItemId++)
-            Items.push_back(ExampleAsset(NextItemId, (NextItemId % 20) < 15 ? 0 : (NextItemId % 20) < 18 ? 1 : 2));
-        RequestSort = true;
-    }
+	{
+		if (Items.Size == 0)
+			NextItemId = 0;
+		Items.reserve(Items.Size + count);
+		for (int n = 0; n < count; n++, NextItemId++)
+		{
+			int category;
+			if ((NextItemId % 20) < 15)
+				category = 0;
+			else if ((NextItemId % 20) < 18)
+				category = 1;
+			else
+				category = 2;
+			Items.push_back(ExampleAsset(NextItemId, category));
+		}
+		RequestSort = true;
+	}
     void ClearItems()
     {
         Items.clear();

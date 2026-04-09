@@ -400,52 +400,60 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // When not using a child window, WorkRect.Max will grow as we append contents.
     if (use_child_window)
-    {
-        // Ensure no vertical scrollbar appears if we only want horizontal one, to make flag consistent
-        // (we have no other way to disable vertical scrollbar of a window while keeping the horizontal one showing)
-        ImVec2 override_content_size(FLT_MAX, FLT_MAX);
-        if ((flags & ImGuiTableFlags_ScrollX) && !(flags & ImGuiTableFlags_ScrollY))
-            override_content_size.y = FLT_MIN;
+	{
+		// Ensure no vertical scrollbar appears if we only want horizontal one, to make flag consistent
+		// (we have no other way to disable vertical scrollbar of a window while keeping the horizontal one showing)
+		ImVec2 override_content_size(FLT_MAX, FLT_MAX);
+		if ((flags & ImGuiTableFlags_ScrollX) && !(flags & ImGuiTableFlags_ScrollY))
+			override_content_size.y = FLT_MIN;
 
-        // Ensure specified width (when not specified, Stretched columns will act as if the width == OuterWidth and
-        // never lead to any scrolling). We don't handle inner_width < 0.0f, we could potentially use it to right-align
-        // based on the right side of the child window work rect, which would require knowing ahead if we are going to
-        // have decoration taking horizontal spaces (typically a vertical scrollbar).
-        if ((flags & ImGuiTableFlags_ScrollX) && inner_width > 0.0f)
-            override_content_size.x = inner_width;
+		// Ensure specified width (when not specified, Stretched columns will act as if the width == OuterWidth and
+		// never lead to any scrolling). We don't handle inner_width < 0.0f, we could potentially use it to right-align
+		// based on the right side of the child window work rect, which would require knowing ahead if we are going to
+		// have decoration taking horizontal spaces (typically a vertical scrollbar).
+		if ((flags & ImGuiTableFlags_ScrollX) && inner_width > 0.0f)
+			override_content_size.x = inner_width;
 
-        if (override_content_size.x != FLT_MAX || override_content_size.y != FLT_MAX)
-            SetNextWindowContentSize(ImVec2(override_content_size.x != FLT_MAX ? override_content_size.x : 0.0f, override_content_size.y != FLT_MAX ? override_content_size.y : 0.0f));
+		if (override_content_size.x != FLT_MAX || override_content_size.y != FLT_MAX)
+		{
+			float x_size = 0.0f;
+			float y_size = 0.0f;
+			if (override_content_size.x != FLT_MAX)
+				x_size = override_content_size.x;
+			if (override_content_size.y != FLT_MAX)
+				y_size = override_content_size.y;
+			SetNextWindowContentSize(ImVec2(x_size, y_size));
+		}
 
-        // Reset scroll if we are reactivating it
-        if ((previous_flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) == 0)
-            if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasScroll) == 0)
-                SetNextWindowScroll(ImVec2(0.0f, 0.0f));
+		// Reset scroll if we are reactivating it
+		if ((previous_flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) == 0)
+			if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasScroll) == 0)
+				SetNextWindowScroll(ImVec2(0.0f, 0.0f));
 
-        // Create scrolling region (without border and zero window padding)
-        ImGuiChildFlags child_child_flags = (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasChildFlags) ? g.NextWindowData.ChildFlags : ImGuiChildFlags_None;
-        ImGuiWindowFlags child_window_flags = (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasWindowFlags) ? g.NextWindowData.WindowFlags : ImGuiWindowFlags_None;
-        if (flags & ImGuiTableFlags_ScrollX)
-            child_window_flags |= ImGuiWindowFlags_HorizontalScrollbar;
-        BeginChildEx(name, instance_id, outer_rect.GetSize(), child_child_flags, child_window_flags);
-        table->InnerWindow = g.CurrentWindow;
-        table->WorkRect = table->InnerWindow->WorkRect;
-        table->OuterRect = table->InnerWindow->Rect();
-        table->InnerRect = table->InnerWindow->InnerRect;
-        IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
+		// Create scrolling region (without border and zero window padding)
+		ImGuiChildFlags child_child_flags = (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasChildFlags) ? g.NextWindowData.ChildFlags : ImGuiChildFlags_None;
+		ImGuiWindowFlags child_window_flags = (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasWindowFlags) ? g.NextWindowData.WindowFlags : ImGuiWindowFlags_None;
+		if (flags & ImGuiTableFlags_ScrollX)
+			child_window_flags |= ImGuiWindowFlags_HorizontalScrollbar;
+		BeginChildEx(name, instance_id, outer_rect.GetSize(), child_child_flags, child_window_flags);
+		table->InnerWindow = g.CurrentWindow;
+		table->WorkRect = table->InnerWindow->WorkRect;
+		table->OuterRect = table->InnerWindow->Rect();
+		table->InnerRect = table->InnerWindow->InnerRect;
+		IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
 
-        // Allow submitting when host is measuring
-        if (table->InnerWindow->SkipItems && outer_window_is_measuring_size)
-            table->InnerWindow->SkipItems = false;
+		// Allow submitting when host is measuring
+		if (table->InnerWindow->SkipItems && outer_window_is_measuring_size)
+			table->InnerWindow->SkipItems = false;
 
-        // When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned
-        if (instance_no == 0)
-        {
-            table->HasScrollbarYPrev = table->HasScrollbarYCurr;
-            table->HasScrollbarYCurr = false;
-        }
-        table->HasScrollbarYCurr |= table->InnerWindow->ScrollbarY;
-    }
+		// When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned
+		if (instance_no == 0)
+		{
+			table->HasScrollbarYPrev = table->HasScrollbarYCurr;
+			table->HasScrollbarYCurr = false;
+		}
+		table->HasScrollbarYCurr |= table->InnerWindow->ScrollbarY;
+	}
     else
     {
         // For non-scrolling tables, WorkRect == OuterRect == InnerRect.
@@ -1567,17 +1575,31 @@ void    ImGui::EndTable()
     table->IsInitializing = false;
 
     // Clear or restore current table, if any
-    IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
-    IM_ASSERT(g.TablesTempDataStacked > 0);
-    temp_data = (--g.TablesTempDataStacked > 0) ? &g.TablesTempData[g.TablesTempDataStacked - 1] : NULL;
-    g.CurrentTable = temp_data && (temp_data->WindowID == outer_window->ID) ? g.Tables.GetByIndex(temp_data->TableIndex) : NULL;
-    if (g.CurrentTable)
-    {
-        g.CurrentTable->TempData = temp_data;
-        g.CurrentTable->DrawSplitter = &temp_data->DrawSplitter;
-    }
-    outer_window->DC.CurrentTableIdx = g.CurrentTable ? g.Tables.GetIndex(g.CurrentTable) : -1;
-    NavUpdateCurrentWindowIsScrollPushableX();
+	IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
+	IM_ASSERT(g.TablesTempDataStacked > 0);
+    ImGuiTableTempData* temp_data_llm;
+	if (--g.TablesTempDataStacked > 0)
+		temp_data_llm = &g.TablesTempData[g.TablesTempDataStacked - 1];
+	else
+		temp_data_llm = NULL;
+
+	if (temp_data_llm && (temp_data_llm->WindowID == outer_window->ID))
+		g.CurrentTable = g.Tables.GetByIndex(temp_data_llm->TableIndex);
+	else
+		g.CurrentTable = NULL;
+
+	if (g.CurrentTable)
+	{
+		g.CurrentTable->TempData = temp_data_llm;
+		g.CurrentTable->DrawSplitter = &temp_data_llm->DrawSplitter;
+	}
+
+	if (g.CurrentTable)
+		outer_window->DC.CurrentTableIdx = g.Tables.GetIndex(g.CurrentTable);
+	else
+		outer_window->DC.CurrentTableIdx = -1;
+
+	NavUpdateCurrentWindowIsScrollPushableX();
 }
 
 // Called in TableSetupColumn() when initializing and in TableLoadSettings() for defaults before applying stored settings.
@@ -1588,20 +1610,49 @@ static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
     if (init_mask & ImGuiTableFlags_Resizable)
     {
         float init_width_or_weight = column->InitStretchWeightOrWidth;
-        column->WidthRequest = ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
-        column->StretchWeight = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch)) ? init_width_or_weight : -1.0f;
+        if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
+            column->WidthRequest = init_width_or_weight;
+        else
+            column->WidthRequest = -1.0f;
+
+        if (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch))
+            column->StretchWeight = init_width_or_weight;
+        else
+            column->StretchWeight = -1.0f;
+
         if (init_width_or_weight > 0.0f) // Disable auto-fit if an explicit width/weight has been specified
             column->AutoFitQueue = 0x00;
     }
+
     if (init_mask & ImGuiTableFlags_Reorderable)
         column->DisplayOrder = (ImGuiTableColumnIdx)table->Columns.index_from_ptr(column);
+
     if (init_mask & ImGuiTableFlags_Hideable)
-        column->IsUserEnabled = column->IsUserEnabledNextFrame = (flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+    {
+        if (flags & ImGuiTableColumnFlags_DefaultHide)
+            column->IsUserEnabled = column->IsUserEnabledNextFrame = 0;
+        else
+            column->IsUserEnabled = column->IsUserEnabledNextFrame = 1;
+    }
+
     if (init_mask & ImGuiTableFlags_Sortable)
     {
-        // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
-        column->SortOrder = (flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
-        column->SortDirection = (flags & ImGuiTableColumnFlags_DefaultSort) ? ((flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending)) : (ImS8)ImGuiSortDirection_None;
+        if (flags & ImGuiTableColumnFlags_DefaultSort)
+            column->SortOrder = 0;
+        else
+            column->SortOrder = -1;
+
+        if (flags & ImGuiTableColumnFlags_DefaultSort)
+        {
+            if (flags & ImGuiTableColumnFlags_PreferSortDescending)
+                column->SortDirection = (ImS8)ImGuiSortDirection_Descending;
+            else
+                column->SortDirection = (ImU8)ImGuiSortDirection_Ascending;
+        }
+        else
+        {
+            column->SortDirection = (ImS8)ImGuiSortDirection_None;
+        }
     }
 }
 
@@ -1669,10 +1720,26 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
     IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
 
-    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount) : 0;
-    table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
-    table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImGuiTableColumnIdx)rows : 0;
-    table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
+    if (table->Flags & ImGuiTableFlags_ScrollX)
+        table->FreezeColumnsRequest = (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount);
+    else
+        table->FreezeColumnsRequest = 0;
+
+    if (table->InnerWindow->Scroll.x != 0.0f)
+        table->FreezeColumnsCount = table->FreezeColumnsRequest;
+    else
+        table->FreezeColumnsCount = 0;
+
+    if (table->Flags & ImGuiTableFlags_ScrollY)
+        table->FreezeRowsRequest = (ImGuiTableColumnIdx)rows;
+    else
+        table->FreezeRowsRequest = 0;
+
+    if (table->InnerWindow->Scroll.y != 0.0f)
+        table->FreezeRowsCount = table->FreezeRowsRequest;
+    else
+        table->FreezeRowsCount = 0;
+
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 
     // Ensure frozen columns are ordered in their section. We still allow multiple frozen columns to be reordered.
@@ -1707,7 +1774,10 @@ int ImGui::TableGetColumnCount()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    return table ? table->ColumnsCount : 0;
+    if (table)
+        return table->ColumnsCount;
+    else
+        return 0;
 }
 
 const char* ImGui::TableGetColumnName(int column_n)
@@ -1845,14 +1915,18 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
     }
     case ImGuiTableBgTarget_RowBg0:
     case ImGuiTableBgTarget_RowBg1:
-    {
-        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
-            return;
-        IM_ASSERT(column_n == -1);
-        int bg_idx = (target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
-        table->RowBgColor[bg_idx] = color;
-        break;
-    }
+	{
+		if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+			return;
+		IM_ASSERT(column_n == -1);
+		int bg_idx;
+		if (target == ImGuiTableBgTarget_RowBg1)
+			bg_idx = 1;
+		else
+			bg_idx = 0;
+		table->RowBgColor[bg_idx] = color;
+		break;
+	}
     default:
         IM_ASSERT(0);
     }
@@ -1979,14 +2053,19 @@ void ImGui::TableEndRow(ImGuiTable* table)
             table_instance->HoveredRowNext = table->CurrentRow;
 
         // Decide of background color for the row
-        ImU32 bg_col0 = 0;
-        ImU32 bg_col1 = 0;
-        if (table->RowBgColor[0] != IM_COL32_DISABLE)
-            bg_col0 = table->RowBgColor[0];
-        else if (table->Flags & ImGuiTableFlags_RowBg)
-            bg_col0 = GetColorU32((table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
-        if (table->RowBgColor[1] != IM_COL32_DISABLE)
-            bg_col1 = table->RowBgColor[1];
+		ImU32 bg_col0 = 0;
+		ImU32 bg_col1 = 0;
+		if (table->RowBgColor[0] != IM_COL32_DISABLE)
+			bg_col0 = table->RowBgColor[0];
+		else if (table->Flags & ImGuiTableFlags_RowBg)
+		{
+			if (table->RowBgColorCounter & 1)
+				bg_col0 = GetColorU32(ImGuiCol_TableRowBgAlt);
+			else
+				bg_col0 = GetColorU32(ImGuiCol_TableRowBg);
+		}
+		if (table->RowBgColor[1] != IM_COL32_DISABLE)
+			bg_col1 = table->RowBgColor[1];
 
         // Decide of top border color
         ImU32 top_border_col = 0;
@@ -2225,10 +2304,17 @@ void ImGui::TableEndCell(ImGuiTable* table)
     if (table->RowFlags & ImGuiTableRowFlags_Headers)
         p_max_pos_x = &column->ContentMaxXHeadersUsed;  // Useful in case user submit contents in header row that is not a TableHeader() call
     else
-        p_max_pos_x = table->IsUnfrozenRows ? &column->ContentMaxXUnfrozen : &column->ContentMaxXFrozen;
+    {
+        if (table->IsUnfrozenRows)
+            p_max_pos_x = &column->ContentMaxXUnfrozen;
+        else
+            p_max_pos_x = &column->ContentMaxXFrozen;
+    }
     *p_max_pos_x = ImMax(*p_max_pos_x, window->DC.CursorMaxPos.x);
+
     if (column->IsEnabled)
         table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->RowCellPaddingY);
+
     column->ItemWidth = window->DC.ItemWidth;
 
     // Propagate text baseline for the entire row

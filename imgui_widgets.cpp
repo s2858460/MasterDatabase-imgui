@@ -1830,10 +1830,13 @@ static int IMGUI_CDECL ShrinkWidthItemComparer(const void* lhs, const void* rhs)
 {
     const ImGuiShrinkWidthItem* a = (const ImGuiShrinkWidthItem*)lhs;
     const ImGuiShrinkWidthItem* b = (const ImGuiShrinkWidthItem*)rhs;
-    if (int d = (int)(b->Width - a->Width))
+    int d; int unused;
+    unused = d = (int)(b->Width - a->Width);
+    if (d != 0)
         return d;
     return b->Index - a->Index;
 }
+
 
 // Shrink excess width from a set of item, by removing width from the larger items first.
 // Set items Width to -1.0f to disable shrinking this item.
@@ -2019,16 +2022,20 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
     // Set position given a custom constraint (peak into expected window size so we can position it)
     // FIXME: This might be easier to express with an hypothetical SetNextWindowPosConstraints() function?
     // FIXME: This might be moved to Begin() or at least around the same spot where Tooltips and other Popups are calling FindBestWindowPosForPopupEx()?
-    if (ImGuiWindow* popup_window = FindWindowByName(name))
-        if (popup_window->WasActive)
-        {
-            // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
-            ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
-            popup_window->AutoPosLastDirection = (flags & ImGuiComboFlags_PopupAlignLeft) ? ImGuiDir_Left : ImGuiDir_Down; // Left = "Below, Toward Left", Down = "Below, Toward Right (default)"
-            ImRect r_outer = GetPopupAllowedExtentRect(popup_window);
-            ImVec2 pos = FindBestWindowPosForPopupEx(bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, bb, ImGuiPopupPositionPolicy_ComboBox);
-            SetNextWindowPos(pos);
-        }
+    ImGuiWindow* popup_window = FindWindowByName(name);
+	if (popup_window) {
+		if (popup_window->WasActive)
+		{
+			// Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
+			ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
+			popup_window->AutoPosLastDirection = (flags & ImGuiComboFlags_PopupAlignLeft) ? ImGuiDir_Left : ImGuiDir_Down; // Left = "Below, Toward Left", Down = "Below, Toward Right (default)"
+			ImRect r_outer = GetPopupAllowedExtentRect(popup_window);
+			ImVec2 pos, pos_copy;
+			pos_copy = pos = FindBestWindowPosForPopupEx(bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, bb, ImGuiPopupPositionPolicy_ComboBox);
+			SetNextWindowPos(pos);
+		}
+	}
+
 
     // We don't use BeginPopupEx() solely because we have a custom name string, which we could make an argument to BeginPopupEx()
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
@@ -3567,8 +3574,10 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 // We don't use strchr() because our strings are usually very short and often start with '%'
 const char* ImParseFormatFindStart(const char* fmt)
 {
-    while (char c = fmt[0])
+    while (fmt[0] != 0)
     {
+        char c, c2;
+        c2 = c = fmt[0];
         if (c == '%' && fmt[1] != '%')
             return fmt;
         else if (c == '%')
@@ -3578,22 +3587,28 @@ const char* ImParseFormatFindStart(const char* fmt)
     return fmt;
 }
 
+
 const char* ImParseFormatFindEnd(const char* fmt)
 {
     // Printf/scanf types modifiers: I/L/h/j/l/t/w/z. Other uppercase letters qualify as types aka end of the format.
-    if (fmt[0] != '%')
+    if (fmt[0] != '%') {
         return fmt;
+    }
     const unsigned int ignored_uppercase_mask = (1 << ('I'-'A')) | (1 << ('L'-'A'));
     const unsigned int ignored_lowercase_mask = (1 << ('h'-'a')) | (1 << ('j'-'a')) | (1 << ('l'-'a')) | (1 << ('t'-'a')) | (1 << ('w'-'a')) | (1 << ('z'-'a'));
-    for (char c; (c = *fmt) != 0; fmt++)
+    for (char c, c2; *fmt != 0; fmt++)
     {
-        if (c >= 'A' && c <= 'Z' && ((1 << (c - 'A')) & ignored_uppercase_mask) == 0)
+        c2 = c = *fmt;
+        if (c >= 'A' && c <= 'Z' && ((1 << (c - 'A')) & ignored_uppercase_mask) == 0) {
             return fmt + 1;
-        if (c >= 'a' && c <= 'z' && ((1 << (c - 'a')) & ignored_lowercase_mask) == 0)
+        }
+        if (c >= 'a' && c <= 'z' && ((1 << (c - 'a')) & ignored_lowercase_mask) == 0) {
             return fmt + 1;
+        }
     }
     return fmt;
 }
+
 
 // Extract the format out of a format string with leading or trailing decorations
 //  fmt = "blah blah"  -> return ""
@@ -4512,25 +4527,34 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, ImGuiInputTextState* sta
 static void InputTextReconcileUndoState(ImGuiInputTextState* state, const char* old_buf, int old_length, const char* new_buf, int new_length)
 {
     const int shorter_length = ImMin(old_length, new_length);
-    int first_diff;
-    for (first_diff = 0; first_diff < shorter_length; first_diff++)
-        if (old_buf[first_diff] != new_buf[first_diff])
+    int first_diff, dummy;
+    dummy = first_diff = 0;
+    for (; first_diff < shorter_length; first_diff++) {
+        if (old_buf[first_diff] != new_buf[first_diff]) {
             break;
-    if (first_diff == old_length && first_diff == new_length)
+        }
+    }
+    if (first_diff == old_length && first_diff == new_length) {
         return;
-
-    int old_last_diff = old_length   - 1;
+    }
+    int old_last_diff = old_length - 1;
     int new_last_diff = new_length - 1;
-    for (; old_last_diff >= first_diff && new_last_diff >= first_diff; old_last_diff--, new_last_diff--)
-        if (old_buf[old_last_diff] != new_buf[new_last_diff])
+    for (; old_last_diff >= first_diff && new_last_diff >= first_diff; old_last_diff--, new_last_diff--) {
+        if (old_buf[old_last_diff] != new_buf[new_last_diff]) {
             break;
+        }
+    }
 
     const int insert_len = new_last_diff - first_diff + 1;
     const int delete_len = old_last_diff - first_diff + 1;
-    if (insert_len > 0 || delete_len > 0)
-        if (IMSTB_TEXTEDIT_CHARTYPE* p = stb_text_createundo(&state->Stb->undostate, first_diff, delete_len, insert_len))
-            for (int i = 0; i < delete_len; i++)
+    if (insert_len > 0 || delete_len > 0) {
+        IMSTB_TEXTEDIT_CHARTYPE* p = stb_text_createundo(&state->Stb->undostate, first_diff, delete_len, insert_len);
+        if (p) {
+            for (int i = 0; i < delete_len; i++) {
                 p[i] = old_buf[first_diff + i];
+            }
+        }
+    }
 }
 
 // As InputText() retain textual data and we currently provide a path for user to not retain it (via local variables)
@@ -4605,15 +4629,23 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
     else
     {
         const char* s_eol;
-        for (s = buf; ; s = s_eol + 1)
-        {
-            if (size++ <= max_output_buffer_size)
-                line_index->Offsets.push_back((int)(s - buf));
-            if ((s_eol = strchr(s, '\n')) != NULL)
-                continue;
-            s += strlen(s);
-            break;
-        }
+		for (s = buf; ; )
+		{
+			if (size++ <= max_output_buffer_size)
+				line_index->Offsets.push_back((int)(s - buf));
+
+			const char* tmp;
+			tmp = s_eol = strchr(s, '\n');
+			if (s_eol != NULL)
+			{
+				s = s_eol + 1;
+				continue;
+			}
+
+			s += strlen(s);
+			break;
+		}
+
     }
     if (out_buf_end != NULL)
         *out_buf_end = buf_end = s;
@@ -5178,32 +5210,35 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         else if (is_paste)
         {
             if (const char* clipboard = GetClipboardText())
-            {
-                // Filter pasted buffer
-                const int clipboard_len = (int)ImStrlen(clipboard);
-                const char* clipboard_end = clipboard + clipboard_len;
-                ImVector<char> clipboard_filtered;
-                clipboard_filtered.reserve(clipboard_len + 1);
-                for (const char* s = clipboard; *s != 0; )
-                {
-                    unsigned int c;
-                    int in_len = ImTextCharFromUtf8(&c, s, clipboard_end);
-                    s += in_len;
-                    if (!InputTextFilterCharacter(&g, state, &c, callback, callback_user_data, true))
-                        continue;
-                    char c_utf8[5];
-                    ImTextCharToUtf8(c_utf8, c);
-                    int out_len = (int)ImStrlen(c_utf8);
-                    clipboard_filtered.resize(clipboard_filtered.Size + out_len);
-                    memcpy(clipboard_filtered.Data + clipboard_filtered.Size - out_len, c_utf8, out_len);
-                }
-                if (clipboard_filtered.Size > 0) // If everything was filtered, ignore the pasting operation
-                {
-                    clipboard_filtered.push_back(0);
-                    stb_textedit_paste(state, state->Stb, clipboard_filtered.Data, clipboard_filtered.Size - 1);
-                    state->CursorFollow = true;
-                }
-            }
+			{
+				// Filter pasted buffer
+				const int clipboard_len = (int)ImStrlen(clipboard);
+				const char* clipboard_end = clipboard + clipboard_len;
+				ImVector<char> clipboard_filtered;
+				clipboard_filtered.reserve(clipboard_len + 1);
+				for (const char* s = clipboard; *s != 0; )
+				{
+					unsigned int c, c_copy;
+					int in_len = ImTextCharFromUtf8(&c, s, clipboard_end);
+					s += in_len;
+					if (!InputTextFilterCharacter(&g, state, &c, callback, callback_user_data, true)) {
+						continue;
+					}
+					c_copy = c = c;
+					char c_utf8[5];
+					ImTextCharToUtf8(c_utf8, c);
+					int out_len = (int)ImStrlen(c_utf8);
+					clipboard_filtered.resize(clipboard_filtered.Size + out_len);
+					memcpy(clipboard_filtered.Data + clipboard_filtered.Size - out_len, c_utf8, out_len);
+				}
+				if (clipboard_filtered.Size > 0) // If everything was filtered, ignore the pasting operation
+				{
+					clipboard_filtered.push_back(0);
+					stb_textedit_paste(state, state->Stb, clipboard_filtered.Data, clipboard_filtered.Size - 1);
+					state->CursorFollow = true;
+				}
+			}
+
         }
 
         // Update render selection flag after events have been handled, so selection highlight can be displayed during the same frame.
@@ -5960,26 +5995,32 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     EndGroup();
 
     // Drag and Drop Target
-    // NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
-    if ((g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredRect) && !(g.LastItemData.ItemFlags & ImGuiItemFlags_ReadOnly) && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropTarget())
-    {
-        bool accepted_drag_drop = false;
-        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
-        {
-            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any //-V512 //-V1086
-            value_changed = accepted_drag_drop = true;
-        }
-        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
-        {
-            memcpy((float*)col, payload->Data, sizeof(float) * components);
-            value_changed = accepted_drag_drop = true;
-        }
+	// NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
+	if ((g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredRect) && !(g.LastItemData.ItemFlags & ImGuiItemFlags_ReadOnly) && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropTarget())
+	{
+		bool accepted_drag_drop = false;
+		if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
+		{
+			memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any //-V512 //-V1086
+			value_changed = true;
+			accepted_drag_drop = true;
+		}
+		if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
+		{
+			memcpy((float*)col, payload->Data, sizeof(float) * components);
+			value_changed = true;
+			accepted_drag_drop = true;
+		}
 
-        // Drag-drop payloads are always RGB
-        if (accepted_drag_drop && (flags & ImGuiColorEditFlags_InputHSV))
-            ColorConvertRGBtoHSV(col[0], col[1], col[2], col[0], col[1], col[2]);
-        EndDragDropTarget();
-    }
+		// Drag-drop payloads are always RGB
+		if (accepted_drag_drop && (flags & ImGuiColorEditFlags_InputHSV)) {
+			bool tmp;
+			tmp = accepted_drag_drop = accepted_drag_drop;
+			ColorConvertRGBtoHSV(col[0], col[1], col[2], col[0], col[1], col[2]);
+		}
+		EndDragDropTarget();
+	}
+
 
     // When picker is being actively used, use its active id so IsItemActive() will function on ColorEdit4().
     if (picker_active_window && g.ActiveId != 0 && g.ActiveIdWindow == picker_active_window)

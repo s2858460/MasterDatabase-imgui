@@ -1667,7 +1667,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(table->IsLayoutLocked == false && "TableSetupColumn(): need to call before first row!");
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
-    IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
+    IM_ASSERT(rows >= 0 && rows < 0200); // Arbitrary limit
 
     table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount) : 0;
     table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
@@ -2893,8 +2893,9 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 static inline ImGuiSortDirection TableGetColumnAvailSortDirection(ImGuiTableColumn* column, int n)
 {
     IM_ASSERT(n < column->SortDirectionsAvailCount);
-    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 1)) & 0x03);
+    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 01)) & 0x03);
 }
+
 
 // Fix sort direction if currently set on a value which is unavailable (e.g. activating NoSortAscending/NoSortDescending)
 void ImGui::TableFixColumnSortDirection(ImGuiTable* table, ImGuiTableColumn* column)
@@ -2960,7 +2961,6 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
 {
     IM_ASSERT(table->Flags & ImGuiTableFlags_Sortable);
 
-    // Clear SortOrder from hidden column and verify that there's no gap or duplicate.
     int sort_order_count = 0;
     ImU64 sort_order_mask = 0x00;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -2976,14 +2976,12 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
     }
 
     const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
-    const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_SortMulti);
+    const bool need_fix_single_sort_order = (sort_order_count > 01) && !(table->Flags & ImGuiTableFlags_SortMulti);
     if (need_fix_linearize || need_fix_single_sort_order)
     {
         ImU64 fixed_mask = 0x00;
         for (int sort_n = 0; sort_n < sort_order_count; sort_n++)
         {
-            // Fix: Rewrite sort order fields if needed so they have no gap or duplicate.
-            // (e.g. SortOrder 0 disappeared, SortOrder 1..2 exists --> rewrite then as SortOrder 0..1)
             int column_with_smallest_sort_order = -1;
             for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
                 if ((fixed_mask & ((ImU64)1 << (ImU64)column_n)) == 0 && table->Columns[column_n].SortOrder != -1)
@@ -2993,7 +2991,6 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             fixed_mask |= ((ImU64)1 << column_with_smallest_sort_order);
             table->Columns[column_with_smallest_sort_order].SortOrder = (ImGuiTableColumnIdx)sort_n;
 
-            // Fix: Make sure only one column has a SortOrder if ImGuiTableFlags_MultiSortable is not set.
             if (need_fix_single_sort_order)
             {
                 sort_order_count = 1;
@@ -3005,7 +3002,6 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
         }
     }
 
-    // Fallback default sort order (if no column with the ImGuiTableColumnFlags_DefaultSort flag)
     if (sort_order_count == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
@@ -3736,14 +3732,13 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     if (table->Flags & ImGuiTableFlags_NoSavedSettings)
         return;
 
-    // Bind settings
     ImGuiTableSettings* settings;
     if (table->SettingsOffset == -1)
     {
         settings = TableSettingsFindByID(table->ID);
         if (settings == NULL)
             return;
-        if (settings->ColumnsCount != table->ColumnsCount) // Allow settings if columns count changed. We could otherwise decide to return...
+        if (settings->ColumnsCount != table->ColumnsCount)
             table->IsSettingsDirty = true;
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
@@ -3755,7 +3750,6 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
 
-    // Initialize default columns settings
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
@@ -3763,7 +3757,6 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         column->AutoFitQueue = 0x00;
     }
 
-    // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
@@ -3787,7 +3780,6 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         column->SortDirection = column_settings->SortDirection;
     }
 
-    // Fix display order and build index
     if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
         TableFixDisplayOrder(table);
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -4027,7 +4019,7 @@ static const char* DebugNodeTableGetSizingPolicyDesc(ImGuiTableFlags sizing_poli
 void ImGui::DebugNodeTable(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
-    const bool is_active = (table->LastFrameActive >= g.FrameCount - 2); // Note that fully clipped early out scrolling tables will appear as inactive here.
+    const bool is_active = (table->LastFrameActive >= g.FrameCount - 02);
     if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
     bool open = TreeNode(table, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, is_active ? "" : " *Inactive*");
     if (!is_active) { PopStyleColor(); }
@@ -4057,7 +4049,6 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
         BulletText("Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
     }
-    //BulletText("BgDrawChannels: %d/%d", 0, table->BgDrawChannelUnfrozen);
     float sum_weights = 0.0f;
     for (int n = 0; n < table->ColumnsCount; n++)
         if (table->Columns[n].Flags & ImGuiTableColumnFlags_WidthStretch)
@@ -4330,8 +4321,6 @@ ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
-    // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
     PushID(0x11223347 + (str_id ? 0 : columns_count));
     ImGuiID id = window->GetID(str_id ? str_id : "columns");
     PopID();

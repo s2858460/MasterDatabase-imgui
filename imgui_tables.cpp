@@ -355,13 +355,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
 
     // Acquire temporary buffers
-    const int table_idx = g.Tables.GetIndex(table);
-    if (++g.TablesTempDataStacked > g.TablesTempData.Size)
-        g.TablesTempData.resize(g.TablesTempDataStacked, ImGuiTableTempData());
-    ImGuiTableTempData* temp_data = table->TempData = &g.TablesTempData[g.TablesTempDataStacked - 1];
-    temp_data->TableIndex = table_idx;
-    table->DrawSplitter = &table->TempData->DrawSplitter;
-    table->DrawSplitter->Clear();
+	const int table_idx = g.Tables.GetIndex(table);
+	g.TablesTempDataStacked = g.TablesTempDataStacked++;
+	if (g.TablesTempDataStacked > g.TablesTempData.Size)
+		g.TablesTempData.resize(g.TablesTempDataStacked, ImGuiTableTempData());
+	ImGuiTableTempData* temp_data = table->TempData = &g.TablesTempData[g.TablesTempDataStacked - 1];
+	temp_data->TableIndex = table_idx;
+	table->DrawSplitter = &table->TempData->DrawSplitter;
+	table->DrawSplitter->Clear();
+
 
     // Fix flags
     table->IsDefaultSizingPolicy = (flags & ImGuiTableFlags_SizingMask_) == 0;
@@ -2724,34 +2726,42 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
                 for (int n = 0; n < (size_for_masks_bitarrays_one >> 2); n++)
                     remaining_mask[n] &= ~merge_group->ChannelsMask[n];
                 for (int n = 0; n < splitter->_Count && merge_channels_count != 0; n++)
-                {
-                    // Copy + overwrite new clip rect
-                    if (!IM_BITARRAY_TESTBIT(merge_group->ChannelsMask, n))
-                        continue;
-                    IM_BITARRAY_CLEARBIT(merge_group->ChannelsMask, n);
-                    merge_channels_count--;
+{
+	// Copy + overwrite new clip rect
+	if (!IM_BITARRAY_TESTBIT(merge_group->ChannelsMask, n))
+		continue;
+	IM_BITARRAY_CLEARBIT(merge_group->ChannelsMask, n);
+	merge_channels_count--;
 
-                    ImDrawChannel* channel = &splitter->_Channels[n];
-                    IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
-                    channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
-                    memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-                }
+	ImDrawChannel* channel = &splitter->_Channels[n];
+	IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
+	channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
+	memcpy(dst_tmp, channel, sizeof(ImDrawChannel));
+	dst_tmp = dst_tmp++;
+}
+
             }
 
             // Make sure Bg2DrawChannelUnfrozen appears in the middle of our groups (whereas Bg0/Bg1 and Bg2 frozen are fixed to 0 and 1)
-            if (merge_group_n == 1 && has_freeze_v)
-                memcpy(dst_tmp++, &splitter->_Channels[table->Bg2DrawChannelUnfrozen], sizeof(ImDrawChannel));
+if (merge_group_n == 1 && has_freeze_v)
+{
+	ImDrawChannel* tmp = dst_tmp++;
+	memcpy(dst_tmp, &splitter->_Channels[table->Bg2DrawChannelUnfrozen], sizeof(ImDrawChannel));
+}
+
         }
 
         // Append unmergeable channels that we didn't reorder at the end of the list
-        for (int n = 0; n < splitter->_Count && remaining_count != 0; n++)
-        {
-            if (!IM_BITARRAY_TESTBIT(remaining_mask, n))
-                continue;
-            ImDrawChannel* channel = &splitter->_Channels[n];
-            memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-            remaining_count--;
-        }
+		for (int n = 0; n < splitter->_Count && remaining_count != 0; n++)
+		{
+			if (!IM_BITARRAY_TESTBIT(remaining_mask, n))
+				continue;
+			ImDrawChannel* channel = &splitter->_Channels[n];
+			memcpy(dst_tmp, channel, sizeof(ImDrawChannel));
+			ImU8* tmp = (ImU8*)dst_tmp++;
+			remaining_count--;
+		}
+
         IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
         memcpy(splitter->_Channels.Data + LEADING_DRAW_CHANNELS, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - LEADING_DRAW_CHANNELS) * sizeof(ImDrawChannel));
     }
@@ -4435,13 +4445,12 @@ void ImGui::NextColumn()
     }
 
     // Next column
-    if (++columns->Current == columns->Count)
+    columns->Current += 1;
+    if (columns->Current == columns->Count)
         columns->Current = 0;
 
     PopItemWidth();
 
-    // Optimization: avoid PopClipRect() + SetCurrentChannel() + PushClipRect()
-    // (which would needlessly attempt to update commands in the wrong channel, then pop or overwrite them),
     ImGuiOldColumnData* column = &columns->Columns[columns->Current];
     SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
     columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
@@ -4450,13 +4459,10 @@ void ImGui::NextColumn()
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (columns->Current > 0)
     {
-        // Columns 1+ ignore IndentX (by canceling it out)
-        // FIXME-COLUMNS: Unnecessary, could be locked?
         window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + column_padding;
     }
     else
     {
-        // New row/line: column 0 honor IndentX.
         window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
         window->DC.IsSameLine = false;
         columns->LineMinY = columns->LineMaxY;
@@ -4466,7 +4472,6 @@ void ImGui::NextColumn()
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     window->DC.CurrLineTextBaseOffset = 0.0f;
 
-    // FIXME-COLUMNS: Share code with BeginColumns() - move code on columns setup.
     float offset_0 = GetColumnOffset(columns->Current);
     float offset_1 = GetColumnOffset(columns->Current + 1);
     float width = offset_1 - offset_0;

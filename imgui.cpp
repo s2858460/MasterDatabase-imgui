@@ -2061,8 +2061,9 @@ ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
     float ab_len_sqr = ab_dir.x * ab_dir.x + ab_dir.y * ab_dir.y;
     if (dot > ab_len_sqr)
         return b;
-    return a + ab_dir * dot / ab_len_sqr;
+    return a + (ab_dir * (dot / ab_len_sqr));
 }
+
 
 bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p)
 {
@@ -2806,11 +2807,11 @@ void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float&
     if (r < g)
     {
         ImSwap(r, g);
-        K = -2.f / 6.f - K;
+        K = (-2.f / 6.f) - K;
     }
 
     const float chroma = r - (g < b ? g : b);
-    out_h = ImFabs(K + (g - b) / (6.f * chroma + 1e-20f));
+    out_h = ImFabs(K + ((g - b) / (6.f * chroma + 1e-20f)));
     out_s = chroma / (r + 1e-20f);
     out_v = r;
 }
@@ -2826,12 +2827,12 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
         return;
     }
 
-    h = ImFmod(h, 1.0f) / (60.0f / 360.0f);
+    h = (ImFmod(h, 1.0f) / (60.0f / 360.0f));
     int   i = (int)h;
     float f = h - (float)i;
     float p = v * (1.0f - s);
-    float q = v * (1.0f - s * f);
-    float t = v * (1.0f - s * (1.0f - f));
+    float q = v * (1.0f - (s * f));
+    float t = v * (1.0f - (s * (1.0f - f)));
 
     switch (i)
     {
@@ -2843,6 +2844,7 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     case 5: default: out_r = v; out_g = p; out_b = q; break;
     }
 }
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStorage
@@ -3984,7 +3986,7 @@ void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFl
     }
     else
     {
-        const float distance = 3.0f + thickness * 0.5f;
+        const float distance = (3.0f + (thickness * 0.5f));
         display_rect.Expand(ImVec2(distance, distance));
         bool fully_visible = window->ClipRect.Contains(display_rect);
         if (!fully_visible)
@@ -4009,25 +4011,26 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
             continue;
         const ImVec2 pos = base_pos - offset;
         const float scale = base_scale;
-        if (!viewport->GetMainRect().Overlaps(ImRect(pos, pos + ImVec2(size.x + 2, size.y + 2) * scale)))
+        if (!viewport->GetMainRect().Overlaps(ImRect(pos, pos + (ImVec2(size.x + 2, size.y + 2) * scale))))
             continue;
         ImDrawList* draw_list = GetForegroundDrawList(viewport);
         ImTextureRef tex_ref = font_atlas->TexRef;
         draw_list->PushTexture(tex_ref);
-        draw_list->AddImage(tex_ref, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale, uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_ref, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_ref, pos,                        pos + size * scale,                  uv[2], uv[3], col_border);
-        draw_list->AddImage(tex_ref, pos,                        pos + size * scale,                  uv[0], uv[1], col_fill);
+        draw_list->AddImage(tex_ref, pos + (ImVec2(1, 0) * scale), pos + ((ImVec2(1, 0) + size) * scale), uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex_ref, pos + (ImVec2(2, 0) * scale), pos + ((ImVec2(2, 0) + size) * scale), uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex_ref, pos,                        pos + (size * scale),                  uv[2], uv[3], col_border);
+        draw_list->AddImage(tex_ref, pos,                        pos + (size * scale),                  uv[0], uv[1], col_fill);
         if (mouse_cursor == ImGuiMouseCursor_Wait || mouse_cursor == ImGuiMouseCursor_Progress)
         {
-            float a_min = ImFmod((float)g.Time * 5.0f, 2.0f * IM_PI);
-            float a_max = a_min + IM_PI * 1.65f;
-            draw_list->PathArcTo(pos + ImVec2(14, -1) * scale, 6.0f * scale, a_min, a_max);
-            draw_list->PathStroke(col_fill, ImDrawFlags_None, 3.0f * scale);
+            float a_min = ImFmod((float)g.Time * 5.0f, (2.0f * IM_PI));
+            float a_max = a_min + (IM_PI * 1.65f);
+            draw_list->PathArcTo(pos + (ImVec2(14, -1) * scale), (6.0f * scale), a_min, a_max);
+            draw_list->PathStroke(col_fill, ImDrawFlags_None, (3.0f * scale));
         }
         draw_list->PopTexture();
     }
 }
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] INITIALIZATION, SHUTDOWN
@@ -5787,7 +5790,7 @@ static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
         ImVector<ImDrawList*>* layer = builder->Layers[layer_n];
         if (layer->empty())
             continue;
-        memcpy(builder->Layers[0]->Data + n, layer->Data, layer->Size * sizeof(ImDrawList*));
+        memcpy(builder->Layers[0]->Data + n, layer->Data, (layer->Size * sizeof(ImDrawList*)));
         n += layer->Size;
         layer->resize(0);
     }
@@ -7056,10 +7059,11 @@ static void RenderWindowOuterSingleBorder(ImGuiWindow* window, int border_n, ImU
     const ImGuiResizeBorderDef& def = resize_border_def[border_n];
     const float rounding = window->WindowRounding;
     const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
+    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + (def.InnerDir * rounding), rounding, (def.OuterAngle - (IM_PI * 0.25f)), def.OuterAngle);
+    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + (def.InnerDir * rounding), rounding, def.OuterAngle, (def.OuterAngle + (IM_PI * 0.25f)));
     window->DrawList->PathStroke(border_col, ImDrawFlags_None, border_size);
 }
+
 
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 {
@@ -7084,9 +7088,10 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
     {
         float y = window->Pos.y + window->TitleBarHeight - 1;
-        window->DrawList->AddLine(ImVec2(window->Pos.x + border_size * 0.5f, y), ImVec2(window->Pos.x + window->Size.x - border_size * 0.5f, y), border_col, g.Style.FrameBorderSize);
+        window->DrawList->AddLine(ImVec2(window->Pos.x + (border_size * 0.5f), y), ImVec2(window->Pos.x + window->Size.x - (border_size * 0.5f), y), border_col, g.Style.FrameBorderSize);
     }
 }
+
 
 // Draw background and borders
 // Draw and handle scrollbars
@@ -10247,7 +10252,7 @@ void ImGui::UpdateMouseWheel()
     if (g.WheelingWindow != NULL)
     {
         g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
-        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
+        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > (g.IO.MouseDragThreshold * g.IO.MouseDragThreshold))
             g.WheelingWindowReleaseTimer = 0.0f;
         if (g.WheelingWindowReleaseTimer <= 0.0f)
             LockWheelingWindow(NULL, 0.0f);
@@ -10268,12 +10273,12 @@ void ImGui::UpdateMouseWheel()
     {
         LockWheelingWindow(mouse_window, wheel.y);
         ImGuiWindow* window = mouse_window;
-        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+        const float new_font_scale = ImClamp(window->FontWindowScale + (g.IO.MouseWheel * 0.10f), 0.50f, 2.50f);
         const float scale = new_font_scale / window->FontWindowScale;
         window->FontWindowScale = new_font_scale;
         if (window == window->RootWindow)
         {
-            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+            const ImVec2 offset = (window->Size * (1.0f - scale)) * ((g.IO.MousePos - window->Pos) / window->Size);
             SetWindowPos(window, window->Pos + offset, 0);
             window->Size = ImTrunc(window->Size * scale); // FIXME: Legacy-ish code, call SetWindowSize()?
             window->SizeFull = ImTrunc(window->SizeFull * scale);
@@ -10313,20 +10318,21 @@ void ImGui::UpdateMouseWheel()
             {
                 LockWheelingWindow(window, wheel.x);
                 float max_step = window->InnerRect.GetWidth() * 0.67f;
-                float scroll_step = ImTrunc(ImMin(2 * window->FontRefSize, max_step));
-                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
+                float scroll_step = ImTrunc(ImMin((2 * window->FontRefSize), max_step));
+                SetScrollX(window, window->Scroll.x - (wheel.x * scroll_step));
                 g.WheelingWindowScrolledFrame = g.FrameCount;
             }
             if (do_scroll[ImGuiAxis_Y])
             {
                 LockWheelingWindow(window, wheel.y);
                 float max_step = window->InnerRect.GetHeight() * 0.67f;
-                float scroll_step = ImTrunc(ImMin(5 * window->FontRefSize, max_step));
-                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
+                float scroll_step = ImTrunc(ImMin((5 * window->FontRefSize), max_step));
+                SetScrollY(window, window->Scroll.y - (wheel.y * scroll_step));
                 g.WheelingWindowScrolledFrame = g.FrameCount;
             }
         }
 }
+
 
 void ImGui::SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard)
 {
@@ -11556,14 +11562,16 @@ float ImGui::GetTextLineHeightWithSpacing()
 float ImGui::GetFrameHeight()
 {
     ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.FramePadding.y * 2.0f;
+    return g.FontSize + (g.Style.FramePadding.y * 2.0f);
 }
+
 
 float ImGui::GetFrameHeightWithSpacing()
 {
     ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
+    return g.FontSize + (g.Style.FramePadding.y * 2.0f) + g.Style.ItemSpacing.y;
 }
+
 
 ImVec2 ImGui::GetContentRegionAvail()
 {
@@ -11968,12 +11976,12 @@ bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags ext
         const bool is_touchscreen = (g.IO.MouseSource == ImGuiMouseSource_TouchScreen);
         if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasPos) == 0)
         {
-            ImVec2 tooltip_pos = is_touchscreen ? (g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_TOUCH * g.Style.MouseCursorScale) : (g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_MOUSE * g.Style.MouseCursorScale);
+            ImVec2 tooltip_pos = is_touchscreen ? (g.IO.MousePos + (TOOLTIP_DEFAULT_OFFSET_TOUCH * g.Style.MouseCursorScale)) : (g.IO.MousePos + (TOOLTIP_DEFAULT_OFFSET_MOUSE * g.Style.MouseCursorScale));
             ImVec2 tooltip_pivot = is_touchscreen ? TOOLTIP_DEFAULT_PIVOT_TOUCH : ImVec2(0.0f, 0.0f);
             SetNextWindowPos(tooltip_pos, ImGuiCond_None, tooltip_pivot);
         }
 
-        SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
+        SetNextWindowBgAlpha((g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f));
         //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkerboard has issue with transparent colors :(
         tooltip_flags |= ImGuiTooltipFlags_OverridePrevious;
     }
@@ -12633,7 +12641,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
         if (parent_window->DC.MenuBarAppending)
             r_avoid = ImRect(-FLT_MAX, parent_window->ClipRect.Min.y, FLT_MAX, parent_window->ClipRect.Max.y); // Avoid parent menu-bar. If we wanted multi-line menu-bar, we may instead want to have the calling window setup e.g. a NextWindowData.PosConstraintAvoidRect field
         else
-            r_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
+            r_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, (parent_window->Pos.x + parent_window->Size.x) - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
         return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid, ImGuiPopupPositionPolicy_Default);
     }
     if (window->Flags & ImGuiWindowFlags_Popup)
@@ -12654,17 +12662,17 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 
         if (g.IO.MouseSource == ImGuiMouseSource_TouchScreen && NavCalcPreferredRefPosSource(ImGuiWindowFlags_Tooltip) == ImGuiInputSource_Mouse)
         {
-            ImVec2 tooltip_pos = ref_pos + TOOLTIP_DEFAULT_OFFSET_TOUCH * scale - (TOOLTIP_DEFAULT_PIVOT_TOUCH * window->Size);
+            ImVec2 tooltip_pos = ref_pos + (TOOLTIP_DEFAULT_OFFSET_TOUCH * scale) - (TOOLTIP_DEFAULT_PIVOT_TOUCH * window->Size);
             if (r_outer.Contains(ImRect(tooltip_pos, tooltip_pos + window->Size)))
                 return tooltip_pos;
         }
 
-        ImVec2 tooltip_pos = ref_pos + TOOLTIP_DEFAULT_OFFSET_MOUSE * scale;
+        ImVec2 tooltip_pos = ref_pos + (TOOLTIP_DEFAULT_OFFSET_MOUSE * scale);
         ImRect r_avoid;
         if (g.NavCursorVisible && g.NavHighlightItemUnderNav && !g.IO.ConfigNavMoveSetMousePos)
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
-            r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * scale, ref_pos.y + 24 * scale); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
+            r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + (24 * scale), ref_pos.y + (24 * scale)); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
         //GetForegroundDrawList()->AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255, 0, 255, 255));
 
         return FindBestWindowPosForPopupEx(tooltip_pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid, ImGuiPopupPositionPolicy_Tooltip);
@@ -13753,9 +13761,9 @@ static void ImGui::NavUpdate()
         if (window->DC.NavLayersActiveMask == 0x00 && window->DC.NavWindowHasScrollY && move_dir != ImGuiDir_None)
         {
             if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
-                SetScrollX(window, ImTrunc(window->Scroll.x + ((move_dir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollX(window, ImTrunc(window->Scroll.x + (((move_dir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed)));
             if (move_dir == ImGuiDir_Up || move_dir == ImGuiDir_Down)
-                SetScrollY(window, ImTrunc(window->Scroll.y + ((move_dir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollY(window, ImTrunc(window->Scroll.y + (((move_dir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed)));
         }
 
         // *Normal* Manual scroll with LStick
@@ -13763,11 +13771,11 @@ static void ImGui::NavUpdate()
         if (nav_gamepad_active)
         {
             const ImVec2 scroll_dir = GetKeyMagnitude2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
-            const float tweak_factor = IsKeyDown(ImGuiKey_NavGamepadTweakSlow) ? 1.0f / 10.0f : IsKeyDown(ImGuiKey_NavGamepadTweakFast) ? 10.0f : 1.0f;
+            const float tweak_factor = IsKeyDown(ImGuiKey_NavGamepadTweakSlow) ? (1.0f / 10.0f) : IsKeyDown(ImGuiKey_NavGamepadTweakFast) ? 10.0f : 1.0f;
             if (scroll_dir.x != 0.0f && window->ScrollbarX)
-                SetScrollX(window, ImTrunc(window->Scroll.x + scroll_dir.x * scroll_speed * tweak_factor));
+                SetScrollX(window, ImTrunc(window->Scroll.x + (scroll_dir.x * scroll_speed * tweak_factor)));
             if (scroll_dir.y != 0.0f)
-                SetScrollY(window, ImTrunc(window->Scroll.y + scroll_dir.y * scroll_speed * tweak_factor));
+                SetScrollY(window, ImTrunc(window->Scroll.y + (scroll_dir.y * scroll_speed * tweak_factor)));
         }
     }
 
@@ -14206,7 +14214,7 @@ static float ImGui::NavUpdatePageUpPageDown()
     else
     {
         ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-        const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->FontRefSize * 1.0f + nav_rect_rel.GetHeight());
+        const float page_offset_y = ImMax(0.0f, (window->InnerRect.GetHeight() - (window->FontRefSize * 1.0f)) + nav_rect_rel.GetHeight());
         float nav_scoring_rect_offset_y = 0.0f;
         if (IsKeyPressed(ImGuiKey_PageUp, true))
         {
@@ -16019,7 +16027,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
     ImGuiWindow* window = g.CurrentWindow;
 
     ImVec2 scale = bb.GetSize() / viewport->Size;
-    ImVec2 off = bb.Min - viewport->Pos * scale;
+    ImVec2 off = bb.Min - (viewport->Pos * scale);
     float alpha_mul = 1.0f;
     window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul * 0.40f));
     for (ImGuiWindow* thumb_window : g.Windows)
@@ -16029,56 +16037,57 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
 
         ImRect thumb_r = thumb_window->Rect();
         ImRect title_r = thumb_window->TitleBarRect();
-        thumb_r = ImRect(ImTrunc(off + thumb_r.Min * scale), ImTrunc(off +  thumb_r.Max * scale));
-        title_r = ImRect(ImTrunc(off + title_r.Min * scale), ImTrunc(off +  ImVec2(title_r.Max.x, title_r.Min.y + title_r.GetHeight() * 3.0f) * scale)); // Exaggerate title bar height
+        thumb_r = ImRect(ImTrunc(off + (thumb_r.Min * scale)), ImTrunc(off + (thumb_r.Max * scale)));
+        title_r = ImRect(ImTrunc(off + (title_r.Min * scale)), ImTrunc(off + (ImVec2(title_r.Max.x, title_r.Min.y + (title_r.GetHeight() * 3.0f)) * scale))); // Exaggerate title bar height
         thumb_r.ClipWithFull(bb);
         title_r.ClipWithFull(bb);
         const bool window_is_focused = (g.NavWindow && thumb_window->RootWindowForTitleBarHighlight == g.NavWindow->RootWindowForTitleBarHighlight);
         window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
         window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
         window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
-        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        window->DrawList->AddText(g.Font, (g.FontSize * 1.0f), title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
     if (viewport->ID == g.DebugMetricsConfig.HighlightViewportID)
         window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
 }
 
+
 static void RenderViewportsThumbnails()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    float SCALE = 1.0f / 8.0f;
+    float SCALE = (1.0f / 8.0f);
     ImRect bb_full(g.Viewports[0]->Pos, g.Viewports[0]->Pos + g.Viewports[0]->Size);
     ImVec2 p = window->DC.CursorPos;
-    ImVec2 off = p - bb_full.Min * SCALE;
+    ImVec2 off = p - (bb_full.Min * SCALE);
 
     // Draw viewports
     for (ImGuiViewportP* viewport : g.Viewports)
     {
-        ImRect viewport_draw_bb(off + (viewport->Pos) * SCALE, off + (viewport->Pos + viewport->Size) * SCALE);
+        ImRect viewport_draw_bb(off + ((viewport->Pos) * SCALE), off + ((viewport->Pos + viewport->Size) * SCALE));
         ImGui::DebugRenderViewportThumbnail(window->DrawList, viewport, viewport_draw_bb);
     }
-    ImGui::Dummy(bb_full.GetSize() * SCALE);
+    ImGui::Dummy((bb_full.GetSize() * SCALE));
 }
 
 // Draw an arbitrary US keyboard layout to visualize translated keys
 void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 {
-    const float scale = ImGui::GetFontSize() / 13.0f;
-    const ImVec2 key_size = ImVec2(35.0f, 35.0f) * scale;
-    const float  key_rounding = 3.0f * scale;
-    const ImVec2 key_face_size = ImVec2(25.0f, 25.0f) * scale;
-    const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f) * scale;
-    const float  key_face_rounding = 2.0f * scale;
-    const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f) * scale;
-    const ImVec2 key_step = ImVec2(key_size.x - 1.0f, key_size.y - 1.0f);
-    const float  key_row_offset = 9.0f * scale;
+    const float scale = (ImGui::GetFontSize() / 13.0f);
+    const ImVec2 key_size = (ImVec2(35.0f, 35.0f) * scale);
+    const float  key_rounding = (3.0f * scale);
+    const ImVec2 key_face_size = (ImVec2(25.0f, 25.0f) * scale);
+    const ImVec2 key_face_pos = (ImVec2(5.0f, 3.0f) * scale);
+    const float  key_face_rounding = (2.0f * scale);
+    const ImVec2 key_label_pos = (ImVec2(7.0f, 4.0f) * scale);
+    const ImVec2 key_step = ImVec2((key_size.x - 1.0f), (key_size.y - 1.0f));
+    const float  key_row_offset = (9.0f * scale);
 
     ImVec2 board_min = GetCursorScreenPos();
-    ImVec2 board_max = ImVec2(board_min.x + 3 * key_step.x + 2 * key_row_offset + 10.0f, board_min.y + 3 * key_step.y + 10.0f);
-    ImVec2 start_pos = ImVec2(board_min.x + 5.0f - key_step.x, board_min.y);
+    ImVec2 board_max = ImVec2((board_min.x + (3 * key_step.x) + (2 * key_row_offset) + 10.0f), board_min.y + (3 * key_step.y) + 10.0f);
+    ImVec2 start_pos = ImVec2((board_min.x + 5.0f) - key_step.x, board_min.y);
 
     struct KeyLayoutData { int Row, Col; const char* Label; ImGuiKey Key; };
     const KeyLayoutData keys_to_display[] =
@@ -16097,12 +16106,12 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
     for (int n = 0; n < IM_COUNTOF(keys_to_display); n++)
     {
         const KeyLayoutData* key_data = &keys_to_display[n];
-        ImVec2 key_min = ImVec2(start_pos.x + key_data->Col * key_step.x + key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
+        ImVec2 key_min = ImVec2((start_pos.x + (key_data->Col * key_step.x)) + (key_data->Row * key_row_offset), start_pos.y + (key_data->Row * key_step.y));
         ImVec2 key_max = key_min + key_size;
         draw_list->AddRectFilled(key_min, key_max, IM_COL32(204, 204, 204, 255), key_rounding);
         draw_list->AddRect(key_min, key_max, IM_COL32(24, 24, 24, 255), key_rounding);
         ImVec2 face_min = ImVec2(key_min.x + key_face_pos.x, key_min.y + key_face_pos.y);
-        ImVec2 face_max = ImVec2(face_min.x + key_face_size.x, face_min.y + key_face_size.y);
+        ImVec2 face_max = ImVec2((face_min.x + key_face_size.x), (face_min.y + key_face_size.y));
         draw_list->AddRect(face_min, face_max, IM_COL32(193, 193, 193, 255), key_face_rounding, ImDrawFlags_None, 2.0f);
         draw_list->AddRectFilled(face_min, face_max, IM_COL32(252, 252, 252, 255), key_face_rounding);
         ImVec2 label_min = ImVec2(key_min.x + key_label_pos.x, key_min.y + key_label_pos.y);
@@ -17011,7 +17020,7 @@ bool ImGui::DebugBreakButton(const char* label, const char* description_of_locat
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     ImVec2 pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrLineTextBaseOffset);
-    ImVec2 size = ImVec2(label_size.x + g.Style.FramePadding.x * 2.0f, label_size.y);
+    ImVec2 size = ImVec2((label_size.x + (g.Style.FramePadding.x * 2.0f)), label_size.y);
 
     const ImRect bb(pos, pos + size);
     ItemSize(size, 0.0f);
@@ -17026,7 +17035,7 @@ bool ImGui::DebugBreakButton(const char* label, const char* description_of_locat
     ImVec4 col4f = GetStyleColorVec4(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     ImVec4 hsv;
     ColorConvertRGBtoHSV(col4f.x, col4f.y, col4f.z, hsv.x, hsv.y, hsv.z);
-    ColorConvertHSVtoRGB(hsv.x + 0.20f, hsv.y, hsv.z, col4f.x, col4f.y, col4f.z);
+    ColorConvertHSVtoRGB((hsv.x + 0.20f), hsv.y, hsv.z, col4f.x, col4f.y, col4f.z);
 
     RenderNavCursor(bb, id);
     RenderFrame(bb.Min, bb.Max, GetColorU32(col4f), true, g.Style.FrameRounding);

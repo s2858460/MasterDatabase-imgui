@@ -3618,13 +3618,17 @@ static void TableSettingsInit(ImGuiTableSettings* settings, ImGuiID id, int colu
 {
     IM_PLACEMENT_NEW(settings) ImGuiTableSettings();
     ImGuiTableColumnSettings* settings_column = settings->GetColumnSettings();
-    for (int n = 0; n < columns_count_max; n++, settings_column++)
+    for (int n = 0; n < columns_count_max; n++)
+    {
         IM_PLACEMENT_NEW(settings_column) ImGuiTableColumnSettings();
+        settings_column++;
+    }
     settings->ID = id;
     settings->ColumnsCount = (ImGuiTableColumnIdx)columns_count;
     settings->ColumnsCountMax = (ImGuiTableColumnIdx)columns_count_max;
     settings->WantApply = true;
 }
+
 
 static size_t TableSettingsCalcChunkSize(int columns_count)
 {
@@ -3697,32 +3701,36 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
 
     bool save_ref_scale = false;
-    settings->SaveFlags = ImGuiTableFlags_None;
-    for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
-    {
-        const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
-        column_settings->WidthOrWeight = width_or_weight;
-        column_settings->Index = (ImGuiTableColumnIdx)n;
-        column_settings->DisplayOrder = column->DisplayOrder;
-        column_settings->SortOrder = column->SortOrder;
-        column_settings->SortDirection = column->SortDirection;
-        column_settings->IsEnabled = column->IsUserEnabled;
-        column_settings->IsStretch = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? 1 : 0;
-        if ((column->Flags & ImGuiTableColumnFlags_WidthStretch) == 0)
-            save_ref_scale = true;
+settings->SaveFlags = ImGuiTableFlags_None;
+for (int n = 0; n < table->ColumnsCount; n++)
+{
+	const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
+	column_settings->WidthOrWeight = width_or_weight;
+	column_settings->Index = (ImGuiTableColumnIdx)n;
+	column_settings->DisplayOrder = column->DisplayOrder;
+	column_settings->SortOrder = column->SortOrder;
+	column_settings->SortDirection = column->SortDirection;
+	column_settings->IsEnabled = column->IsUserEnabled;
+	column_settings->IsStretch = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? 1 : 0;
+	if ((column->Flags & ImGuiTableColumnFlags_WidthStretch) == 0)
+		save_ref_scale = true;
 
-        // We skip saving some data in the .ini file when they are unnecessary to restore our state.
-        // Note that fixed width where initial width was derived from auto-fit will always be saved as InitStretchWeightOrWidth will be 0.0f.
-        // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved when present.
-        if (width_or_weight != column->InitStretchWeightOrWidth)
-            settings->SaveFlags |= ImGuiTableFlags_Resizable;
-        if (column->DisplayOrder != n)
-            settings->SaveFlags |= ImGuiTableFlags_Reorderable;
-        if (column->SortOrder != -1)
-            settings->SaveFlags |= ImGuiTableFlags_Sortable;
-        if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
-            settings->SaveFlags |= ImGuiTableFlags_Hideable;
-    }
+	// We skip saving some data in the .ini file when they are unnecessary to restore our state.
+	// Note that fixed width where initial width was derived from auto-fit will always be saved as InitStretchWeightOrWidth will be 0.0f.
+	// FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved when present.
+	if (width_or_weight != column->InitStretchWeightOrWidth)
+		settings->SaveFlags |= ImGuiTableFlags_Resizable;
+	if (column->DisplayOrder != n)
+		settings->SaveFlags |= ImGuiTableFlags_Reorderable;
+	if (column->SortOrder != -1)
+		settings->SaveFlags |= ImGuiTableFlags_Sortable;
+	if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
+		settings->SaveFlags |= ImGuiTableFlags_Hideable;
+
+	column++;
+	column_settings++;
+}
+
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 
@@ -3764,28 +3772,34 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     }
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
-    ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
-    for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
-    {
-        int column_n = column_settings->Index;
-        if (column_n < 0 || column_n >= table->ColumnsCount)
-            continue;
+ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
+for (int data_n = 0; data_n < settings->ColumnsCount; data_n++)
+{
+	int column_n = column_settings->Index;
+	if (column_n < 0 || column_n >= table->ColumnsCount)
+	{
+		column_settings++;
+		continue;
+	}
 
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (settings->SaveFlags & ImGuiTableFlags_Resizable)
-        {
-            if (column_settings->IsStretch)
-                column->StretchWeight = column_settings->WidthOrWeight;
-            else
-                column->WidthRequest = column_settings->WidthOrWeight;
-        }
-        if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
-            column->DisplayOrder = column_settings->DisplayOrder;
-        if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
-            column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
-        column->SortOrder = column_settings->SortOrder;
-        column->SortDirection = column_settings->SortDirection;
-    }
+	ImGuiTableColumn* column = &table->Columns[column_n];
+	if (settings->SaveFlags & ImGuiTableFlags_Resizable)
+	{
+		if (column_settings->IsStretch)
+			column->StretchWeight = column_settings->WidthOrWeight;
+		else
+			column->WidthRequest = column_settings->WidthOrWeight;
+	}
+	if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
+		column->DisplayOrder = column_settings->DisplayOrder;
+	if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
+		column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
+	column->SortOrder = column_settings->SortOrder;
+	column->SortDirection = column_settings->SortDirection;
+
+	column_settings++;
+}
+
 
     // Fix display order and build index
     if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
@@ -3913,21 +3927,27 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
         if (settings->RefScale != 0.0f)
             buf->appendf("RefScale=%g\n", settings->RefScale);
         ImGuiTableColumnSettings* column = settings->GetColumnSettings();
-        for (int column_n = 0; column_n < settings->ColumnsCount; column_n++, column++)
-        {
-            // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
-            bool save_column = column->UserID != 0 || save_size || save_visible || save_order || (save_sort && column->SortOrder != -1);
-            if (!save_column)
-                continue;
-            buf->appendf("Column %-2d", column_n);
-            if (column->UserID != 0)                    { buf->appendf(" UserID=%08X", column->UserID); }
-            if (save_size && column->IsStretch)         { buf->appendf(" Weight=%.4f", column->WidthOrWeight); }
-            if (save_size && !column->IsStretch)        { buf->appendf(" Width=%d", (int)column->WidthOrWeight); }
-            if (save_visible)                           { buf->appendf(" Visible=%d", column->IsEnabled); }
-            if (save_order)                             { buf->appendf(" Order=%d", column->DisplayOrder); }
-            if (save_sort && column->SortOrder != -1)   { buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^'); }
-            buf->append("\n");
-        }
+for (int column_n = 0; column_n < settings->ColumnsCount; column_n++)
+{
+	// "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
+	bool save_column = column->UserID != 0 || save_size || save_visible || save_order || (save_sort && column->SortOrder != -1);
+	if (!save_column)
+	{
+		column++;
+		continue;
+	}
+	buf->appendf("Column %-2d", column_n);
+	if (column->UserID != 0)                    { buf->appendf(" UserID=%08X", column->UserID); }
+	if (save_size && column->IsStretch)         { buf->appendf(" Weight=%.4f", column->WidthOrWeight); }
+	if (save_size && !column->IsStretch)        { buf->appendf(" Width=%d", (int)column->WidthOrWeight); }
+	if (save_visible)                           { buf->appendf(" Visible=%d", column->IsEnabled); }
+	if (save_order)                             { buf->appendf(" Order=%d", column->DisplayOrder); }
+	if (save_sort && column->SortOrder != -1)   { buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^'); }
+	buf->append("\n");
+
+	column++;
+}
+
         buf->append("\n");
     }
 }

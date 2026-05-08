@@ -1591,29 +1591,30 @@ static void DemoWindowWidgetsDragAndDrop()
                     ImGui::EndDragDropSource();
                 }
                 if (ImGui::BeginDragDropTarget())
-                {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
-                    {
-                        IM_ASSERT(payload->DataSize == sizeof(int));
-                        int payload_n = *(const int*)payload->Data;
-                        if (mode == Mode_Copy)
-                        {
-                            names[n] = names[payload_n];
-                        }
-                        if (mode == Mode_Move)
-                        {
-                            names[n] = names[payload_n];
-                            names[payload_n] = "";
-                        }
-                        if (mode == Mode_Swap)
-                        {
-                            const char* tmp = names[n];
-                            names[n] = names[payload_n];
-                            names[payload_n] = tmp;
-                        }
-                    }
-                    ImGui::EndDragDropTarget();
-                }
+{
+	if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+	{
+		IM_ASSERT(payload->DataSize == sizeof(int));
+		int payload_n = *(const int*)payload->Data;
+		if (mode == Mode_Copy)
+		{
+			names[n] = names[payload_n];
+		}
+		if (mode == Mode_Move)
+		{
+			names[n] = names[payload_n];
+			names[payload_n] = "";
+		}
+		if (mode == Mode_Swap)
+		{
+			const char* tmp = names[n];
+			names[n] = names[payload_n];
+			names[payload_n] = tmp;
+		}
+	}
+	ImGui::EndDragDropTarget();
+}
+
                 ImGui::PopID();
             }
             ImGui::TreePop();
@@ -9477,67 +9478,68 @@ struct ExampleAppPropertyEditor
         ImGui::SameLine();
 
         ImGui::BeginGroup(); // Lock X position
-        if (ExampleTreeNode* node = VisibleNode)
-        {
-            ImGui::Text("%s", node->Name);
-            ImGui::TextDisabled("UID: 0x%08X", node->UID);
-            ImGui::Separator();
-            if (ImGui::BeginTable("##properties", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
-            {
-                // Push object ID after we entered the table, so table is shared for all objects
-                ImGui::PushID((int)node->UID);
-                ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
-                ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
-                if (node->HasData)
-                {
-                    // In a typical application, the structure description would be derived from a data-driven system.
-                    // - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
-                    // - Limits and some details are hard-coded to simplify the demo.
-                    for (const ExampleMemberInfo& field_desc : ExampleTreeNodeMemberInfos)
-                    {
-                        ImGui::TableNextRow();
-                        ImGui::PushID(field_desc.Name);
-                        ImGui::TableNextColumn();
-                        ImGui::AlignTextToFramePadding();
-                        ImGui::TextUnformatted(field_desc.Name);
-                        ImGui::TableNextColumn();
-                        void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
-                        switch (field_desc.DataType)
-                        {
-                        case ImGuiDataType_Bool:
-                        {
-                            IM_ASSERT(field_desc.DataCount == 1);
-                            ImGui::Checkbox("##Editor", (bool*)field_ptr);
-                            break;
-                        }
-                        case ImGuiDataType_S32:
-                        {
-                            int v_min = INT_MIN, v_max = INT_MAX;
-                            ImGui::SetNextItemWidth(-FLT_MIN);
-                            ImGui::DragScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, 1.0f, &v_min, &v_max);
-                            break;
-                        }
-                        case ImGuiDataType_Float:
-                        {
-                            float v_min = 0.0f, v_max = 1.0f;
-                            ImGui::SetNextItemWidth(-FLT_MIN);
-                            ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
-                            break;
-                        }
-                        case ImGuiDataType_String:
-                        {
-                            ImGui::InputText("##Editor", reinterpret_cast<char*>(field_ptr), 28);
-                            break;
-                        }
-                        }
-                        ImGui::PopID();
-                    }
-                }
-                ImGui::PopID();
-                ImGui::EndTable();
-            }
-        }
-        ImGui::EndGroup();
+if (ExampleTreeNode* node = VisibleNode)
+{
+	ImGui::Text("%s", node->Name);
+	ImGui::TextDisabled("UID: 0x%08X", node->UID);
+	ImGui::Separator();
+	if (ImGui::BeginTable("##properties", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
+	{
+		// Push object ID after we entered the table, so table is shared for all objects
+		ImGui::PushID((int)node->UID);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
+		if (node->HasData)
+		{
+			// In a typical application, the structure description would be derived from a data-driven system.
+			// - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
+			// - Limits and some details are hard-coded to simplify the demo.
+			for (const ExampleMemberInfo& field_desc : ExampleTreeNodeMemberInfos)
+			{
+				ImGui::TableNextRow();
+				ImGui::PushID(field_desc.Name);
+				ImGui::TableNextColumn();
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(field_desc.Name);
+				ImGui::TableNextColumn();
+				void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
+				switch (field_desc.DataType)
+				{
+				case ImGuiDataType_Bool:
+				{
+					IM_ASSERT(field_desc.DataCount == 1);
+					ImGui::Checkbox("##Editor", (bool*)field_ptr);
+					break;
+				}
+				case ImGuiDataType_S32:
+				{
+					int v_min = INT_MIN, v_max = INT_MAX;
+					ImGui::SetNextItemWidth(-FLT_MIN);
+					ImGui::DragScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, 1.0f, &v_min, &v_max);
+					break;
+				}
+				case ImGuiDataType_Float:
+				{
+					float v_min = 0.0f, v_max = 1.0f;
+					ImGui::SetNextItemWidth(-FLT_MIN);
+					ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
+					break;
+				}
+				case ImGuiDataType_String:
+				{
+					ImGui::InputText("##Editor", reinterpret_cast<char*>(field_ptr), 28);
+					break;
+				}
+				}
+				ImGui::PopID();
+			}
+		}
+		ImGui::PopID();
+		ImGui::EndTable();
+	}
+}
+ImGui::EndGroup();
+
     }
 
     void DrawTreeNode(ExampleTreeNode* node)
@@ -10708,25 +10710,27 @@ struct ExampleAssetsBrowser
         }
 
         // Show a table with ONLY one header row to showcase the idea/possibility of using this to provide a sorting UI
-        if (AllowSorting)
-        {
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-            ImGuiTableFlags table_flags_for_sort_specs = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders;
-            if (ImGui::BeginTable("for_sort_specs_only", 2, table_flags_for_sort_specs, ImVec2(0.0f, ImGui::GetFrameHeight())))
-            {
-                ImGui::TableSetupColumn("Index");
-                ImGui::TableSetupColumn("Type");
-                ImGui::TableHeadersRow();
-                if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
-                    if (sort_specs->SpecsDirty || RequestSort)
-                    {
-                        ExampleAsset::SortWithSortSpecs(sort_specs, Items.Data, Items.Size);
-                        sort_specs->SpecsDirty = RequestSort = false;
-                    }
-                ImGui::EndTable();
-            }
-            ImGui::PopStyleVar();
-        }
+if (AllowSorting)
+{
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+	ImGuiTableFlags table_flags_for_sort_specs = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders;
+	if (ImGui::BeginTable("for_sort_specs_only", 2, table_flags_for_sort_specs, ImVec2(0.0f, ImGui::GetFrameHeight())))
+	{
+		ImGui::TableSetupColumn("Index");
+		ImGui::TableSetupColumn("Type");
+		ImGui::TableHeadersRow();
+		if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
+			if (sort_specs->SpecsDirty || RequestSort)
+			{
+				ExampleAsset::SortWithSortSpecs(sort_specs, Items.Data, Items.Size);
+				sort_specs->SpecsDirty = false;
+				RequestSort = false;
+			}
+		ImGui::EndTable();
+	}
+	ImGui::PopStyleVar();
+}
+
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::SetNextWindowContentSize(ImVec2(0.0f, LayoutOuterPadding + LayoutLineCount * (LayoutItemSize.y + LayoutItemSpacing)));

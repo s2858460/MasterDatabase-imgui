@@ -2690,9 +2690,13 @@ void ImFontAtlas::ClearInputData()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
 
     for (ImFont* font : Fonts)
+    {
         ImFontAtlasFontDestroyOutput(this, font);
+    }
     for (ImFontConfig& font_cfg : Sources)
+    {
         ImFontAtlasFontDestroySourceData(this, &font_cfg);
+    }
     for (ImFont* font : Fonts)
     {
         // When clearing this we lose access to the font name and other information used to build the font.
@@ -2708,7 +2712,9 @@ void ImFontAtlas::ClearTexData()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     IM_ASSERT(RendererHasTextures == false && "Not supported for dynamic atlases, but you may call Clear().");
     for (ImTextureData* tex : TexList)
+    {
         tex->DestroyPixels();
+    }
     //Locked = true; // Hoped to be able to lock this down but some reload patterns may not be happy with it.
 }
 
@@ -2717,17 +2723,21 @@ void ImFontAtlas::ClearFonts()
     // FIXME-NEWATLAS: Illegal to remove currently bound font.
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     for (ImFont* font : Fonts)
+    {
         ImFontAtlasBuildNotifySetFont(this, font, NULL);
+    }
     ImFontAtlasBuildDestroy(this);
     ClearInputData();
     Fonts.clear_delete();
     TexIsBuilt = false;
     for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
+    {
         if (shared_data->FontAtlas == this)
         {
             shared_data->Font = NULL;
             shared_data->FontScale = shared_data->FontSize = 0.0f;
         }
+    }
 }
 
 static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* atlas)
@@ -2738,11 +2748,13 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
     // - Without this hack, we would have quite a pitfall as many legacy codebases have an early call to Build().
     //   Whereas conversely, the portion of people using ImDrawList without ImGui is expected to be pathologically rare.
     for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    {
         if (ImGuiContext* imgui_ctx = shared_data->Context)
         {
             atlas->RendererHasTextures = (imgui_ctx->IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
             break;
         }
+    }
 }
 
 // Called by NewFrame() for atlases owned by a context.
@@ -2759,20 +2771,28 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
     {
         atlas->TexIsBuilt = true;
         if (atlas->Builder == NULL) // This will only happen if fonts were not already loaded.
+        {
             ImFontAtlasBuildMain(atlas);
+        }
     }
     // Legacy backend
     if (!atlas->RendererHasTextures)
+    {
         IM_ASSERT_USER_ERROR(atlas->TexIsBuilt, "Backend does not support ImGuiBackendFlags_RendererHasTextures, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
+    }
     if (atlas->TexIsBuilt && atlas->Builder->PreloadedAllGlyphsRanges)
+    {
         IM_ASSERT_USER_ERROR(atlas->RendererHasTextures == false, "Called ImFontAtlas::Build() before ImGuiBackendFlags_RendererHasTextures got set! With new backends: you don't need to call Build().");
+    }
 
     // Clear BakedCurrent cache, this is important because it ensure the uncached path gets taken once.
     // We also rely on ImFontBaked* pointers never crossing frames.
     ImFontAtlasBuilder* builder = atlas->Builder;
     builder->FrameCount = frame_count;
     for (ImFont* font : atlas->Fonts)
+    {
         font->LastBaked = NULL;
+    }
 
     // Garbage collect BakedPool
     if (builder->BakedDiscardedCount > 0)
@@ -2806,7 +2826,9 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
             tex->UpdateRect.w = tex->UpdateRect.h = 0;
         }
         if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
+        {
             IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
+        }
 
         // Request destroy
         // - Keep bool to true in order to differentiate a planned destroy vs a destroy decided by the backend.
@@ -2821,22 +2843,30 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
         // (note: backends between 1.92.0 and 1.92.4 could set an already destroyed texture to ImTextureStatus_WantDestroy
         //  when invalidating graphics objects twice, which would previously remove it from the list and crash.)
         if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL)
+        {
             tex->Status = ImTextureStatus_Destroyed;
+        }
 
         // Process texture being destroyed
         if (tex->Status == ImTextureStatus_Destroyed)
         {
             IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture Status to Destroyed but did not clear TexID/BackendUserData!");
             if (tex->WantDestroyNextFrame)
+            {
                 remove_from_list = true; // Destroy was scheduled by us
+            }
             else
+            {
                 tex->Status = ImTextureStatus_WantCreate; // Destroy was done was backend: recreate it (e.g. freed resources mid-run)
+            }
         }
 
         // The backend may need defer destroying by a few frames, to handle texture used by previous in-flight rendering.
         // We allow the texture staying in _WantDestroy state and increment a counter which the backend can use to take its decision.
         if (tex->Status == ImTextureStatus_WantDestroy)
+        {
             tex->UnusedFrames++;
+        }
 
         // Destroy and remove
         if (remove_from_list)
@@ -2857,7 +2887,9 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     {
         int line_sz = w * ImTextureDataGetFormatBytesPerPixel(src_fmt);
         for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
+        {
             memcpy(dst_pixels, src_pixels, line_sz);
+        }
     }
     else if (src_fmt == ImTextureFormat_Alpha8 && dst_fmt == ImTextureFormat_RGBA32)
     {
@@ -2866,7 +2898,9 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
             const ImU8* src_p = (const ImU8*)src_pixels;
             ImU32* dst_p = (ImU32*)(void*)dst_pixels;
             for (int nx = w; nx > 0; nx--)
+            {
                 *dst_p++ = IM_COL32(255, 255, 255, (unsigned int)(*src_p++));
+            }
         }
     }
     else if (src_fmt == ImTextureFormat_RGBA32 && dst_fmt == ImTextureFormat_Alpha8)
@@ -2876,7 +2910,9 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
             const ImU32* src_p = (const ImU32*)(void*)src_pixels;
             ImU8* dst_p = (ImU8*)dst_pixels;
             for (int nx = w; nx > 0; nx--)
+            {
                 *dst_p++ = ((*src_p++) >> IM_COL32_A_SHIFT) & 0xFF;
+            }
         }
     }
     else
@@ -2891,8 +2927,11 @@ void ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data)
 {
     // Multiply operator (legacy)
     if (data->FontSrc->RasterizerMultiply != 1.0f)
+    {
         ImFontAtlasTextureBlockPostProcessMultiply(data, data->FontSrc->RasterizerMultiply);
+    }
 }
+
 
 void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data, float multiply_factor)
 {
@@ -2935,7 +2974,9 @@ void ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, i
     {
         ImU8 col_a = (col >> IM_COL32_A_SHIFT) & 0xFF;
         for (int y = 0; y < h; y++)
+        {
             memset((ImU8*)dst_tex->GetPixelsAt(dst_x, dst_y + y), col_a, w);
+        }
     }
     else
     {
@@ -2943,7 +2984,9 @@ void ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, i
         {
             ImU32* p = (ImU32*)(void*)dst_tex->GetPixelsAt(dst_x, dst_y + y);
             for (int x = w; x > 0; x--, p++)
+            {
                 *p = col;
+            }
         }
     }
 }
@@ -2958,8 +3001,11 @@ void ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, I
     IM_ASSERT(dst_x >= 0 && dst_x + w <= dst_tex->Width);
     IM_ASSERT(dst_y >= 0 && dst_y + h <= dst_tex->Height);
     for (int y = 0; y < h; y++)
+    {
         memcpy(dst_tex->GetPixelsAt(dst_x, dst_y + y), src_tex->GetPixelsAt(src_x, src_y + y), w * dst_tex->BytesPerPixel);
+    }
 }
+
 
 // Queue texture block update for renderer backend
 void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h)
@@ -3030,11 +3076,15 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     //IM_ASSERT(font_cfg_in->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
     IM_ASSERT(font_cfg_in->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
     if (font_cfg_in->GlyphOffset.x != 0.0f || font_cfg_in->GlyphOffset.y != 0.0f || font_cfg_in->GlyphMinAdvanceX != 0.0f || font_cfg_in->GlyphMaxAdvanceX != FLT_MAX)
+    {
         IM_ASSERT(font_cfg_in->SizePixels != 0.0f && "Specifying glyph offset/advances requires a reference size to base it on.");
+    }
 
     // Lazily create builder on the first call to AddFont
     if (Builder == NULL)
+    {
         ImFontAtlasBuildInit(this);
+    }
 
     // Create new font
     const bool is_first_font = (Fonts.Size == 0);
@@ -3059,7 +3109,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     Sources.push_back(*font_cfg_in);
     ImFontConfig* font_cfg = &Sources.back();
     if (font_cfg->DstFont == NULL)
+    {
         font_cfg->DstFont = font;
+    }
     font->Sources.push_back(font_cfg);
     ImFontAtlasBuildUpdatePointers(this); // Pointers to Sources are otherwise dangling after we called Sources.push_back().
 
@@ -3096,7 +3148,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     ImFontAtlasFontSourceAddToFont(this, font, font_cfg);
 
     if (is_first_font)
+    {
         ImFontAtlasBuildNotifySetFont(this, NULL, font);
+    }
     return font;
 }
 
@@ -3124,17 +3178,21 @@ static float GetExpectedContextFontSize(ImGuiContext* ctx)
 {
     return ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi;
 }
-
 // Legacy function with heuristic to select Pixel or Vector font.
 // The selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a small threshold at the time of adding the default font.
 // Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() based on your own logic.
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg)
 {
     if (OwnerContext == NULL || GetExpectedContextFontSize(OwnerContext) >= 15.0f)
+    {
         return AddFontDefaultVector(font_cfg);
+    }
     else
+    {
         return AddFontDefaultBitmap(font_cfg);
+    }
 }
+
 
 // Load embedded ProggyClean.ttf. Default size 13, disable oversampling.
 // If you want a similar font which may be better scaled, consider using AddFontDefaultVector().
@@ -3143,11 +3201,17 @@ ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (!font_cfg_template)
+    {
         font_cfg.PixelSnapH = true; // Prevents sub-integer scaling factors at lower-level layers.
+    }
     if (font_cfg.SizePixels <= 0.0f)
+    {
         font_cfg.SizePixels = 13.0f; // This only serves (1) as a reference for GlyphOffset.y setting and (2) as a default for pre-1.92 backend.
+    }
     if (font_cfg.Name[0] == '\0')
+    {
         ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyClean.ttf");
+    }
     font_cfg.EllipsisChar = (ImWchar)0x0085;
     font_cfg.GlyphOffset.y += 1.0f * (font_cfg.SizePixels / 13.0f); // Add +1 offset per 13 units
 
@@ -3160,6 +3224,7 @@ ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
     return NULL;
 #endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
 }
+
 
 // Load a minimal version of ProggyForever, designed to match our good old ProggyClean, but nicely scalable.
 // (See build script in https://github.com/ocornut/proggyforever for details)
@@ -3210,7 +3275,6 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
-
 // NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
 ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* font_data, int font_data_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
@@ -3222,9 +3286,12 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* font_data, int font_data_size, f
     font_cfg.FontDataSize = font_data_size;
     font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     if (glyph_ranges)
+    {
         font_cfg.GlyphRanges = glyph_ranges;
+    }
     return AddFont(&font_cfg);
 }
+
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {

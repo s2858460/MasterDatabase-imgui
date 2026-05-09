@@ -9104,10 +9104,15 @@ bool ImGui::BeginViewportSideBar(const char* name, ImGuiViewport* viewport_p, Im
         SetNextWindowSize(size);
 
         // Report our size into work area (for next frame) using actual window size
-        if (dir == ImGuiDir_Up || dir == ImGuiDir_Left)
-            viewport->BuildWorkInsetMin[axis] += axis_size;
-        else if (dir == ImGuiDir_Down || dir == ImGuiDir_Right)
-            viewport->BuildWorkInsetMax[axis] += axis_size;
+if (dir == ImGuiDir_Up || dir == ImGuiDir_Left)
+{
+	viewport->BuildWorkInsetMin[axis] += axis_size;
+}
+else if (dir == ImGuiDir_Down || dir == ImGuiDir_Right)
+{
+	viewport->BuildWorkInsetMax[axis] += axis_size;
+}
+
     }
 
     window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -9155,10 +9160,13 @@ void ImGui::EndMainMenuBar()
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
     // FIXME: With this strategy we won't be able to restore a NULL focus.
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == ImGuiNavLayer_Main && !g.NavAnyRequest && g.ActiveId == 0)
+    {
         FocusTopMostWindowUnderOne(g.NavWindow, NULL, NULL, ImGuiFocusRequestFlags_UnlessBelowModal | ImGuiFocusRequestFlags_RestoreFocusedChild);
+    }
 
     End();
 }
+
 
 static bool IsRootOfOpenMenuSet()
 {
@@ -9205,35 +9213,44 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     // We are relying on a O(N) search - so O(N log N) over the frame - which seems like the most efficient for the expected small amount of BeginMenu() calls per frame.
     // If somehow this is ever becoming a problem we can switch to use e.g. ImGuiStorage mapping key to last frame used.
     if (g.MenusIdSubmittedThisFrame.contains(id))
-    {
-        if (menu_is_open)
-            menu_is_open = BeginPopupMenuEx(id, label, window_flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
-        else
-            g.NextWindowData.ClearFlags();          // we behave like Begin() and need to consume those values
-        return menu_is_open;
-    }
+{
+	if (menu_is_open)
+	{
+		menu_is_open = BeginPopupMenuEx(id, label, window_flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+	}
+	else
+	{
+		g.NextWindowData.ClearFlags();          // we behave like Begin() and need to consume those values
+	}
+	return menu_is_open;
+}
 
-    // Tag menu as used. Next time BeginMenu() with same ID is called it will append to existing menu
-    g.MenusIdSubmittedThisFrame.push_back(id);
+// Tag menu as used. Next time BeginMenu() with same ID is called it will append to existing menu
+g.MenusIdSubmittedThisFrame.push_back(id);
 
-    ImVec2 label_size = CalcTextSize(label, NULL, true);
+ImVec2 label_size = CalcTextSize(label, NULL, true);
 
-    // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent without always being a Child window)
-    // This is only done for items for the menu set and not the full parent window.
-    const bool menuset_is_open = IsRootOfOpenMenuSet();
-    if (menuset_is_open)
-        PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+// Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent without always being a Child window)
+// This is only done for items for the menu set and not the full parent window.
+const bool menuset_is_open = IsRootOfOpenMenuSet();
+if (menuset_is_open)
+{
+	PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+}
 
-    // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
-    // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
-    // e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
-    ImVec2 popup_pos;
-    ImVec2 pos = window->DC.CursorPos;
-    PushID(label);
-    if (!enabled)
-        BeginDisabled();
-    const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
-    bool pressed;
+// The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
+// However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
+// e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
+ImVec2 popup_pos;
+ImVec2 pos = window->DC.CursorPos;
+PushID(label);
+if (!enabled)
+{
+	BeginDisabled();
+}
+const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
+bool pressed;
+
 
     // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
     const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_NoHoldingActiveID | ImGuiSelectableFlags_NoSetKeyOwner | ImGuiSelectableFlags_SelectOnClick | ImGuiSelectableFlags_NoAutoClosePopups;
@@ -9411,15 +9428,20 @@ void ImGui::EndMenu()
 
     ImGuiWindow* parent_window = window->ParentWindow;  // Should always be != NULL is we passed assert.
     if (window->BeginCount == window->BeginCountPreviousFrame)
+    {
         if (g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet())
+        {
             if (g.NavWindow && (g.NavWindow->RootWindowForNav == window) && parent_window->DC.LayoutType == ImGuiLayoutType_Vertical)
             {
                 ClosePopupToLevel(g.BeginPopupStack.Size - 1, true);
                 NavMoveRequestCancel();
             }
+        }
+    }
 
     EndPopup();
 }
+
 
 bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut, bool selected, bool enabled)
 {
@@ -9464,30 +9486,35 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     else
     {
         // Menu item inside a vertical menu
-        // (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
-        //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
-        float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
-        float shortcut_w = (shortcut && shortcut[0]) ? CalcTextSize(shortcut, NULL).x : 0.0f;
-        float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
-        float min_w = window->DC.MenuColumns.DeclColumns(icon_w, label_size.x, shortcut_w, checkmark_w); // Feedback for next frame
-        float stretch_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
-        ImVec2 text_pos(pos.x, pos.y + window->DC.CurrLineTextBaseOffset);
-        pressed = Selectable("", false, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth, ImVec2(min_w, label_size.y));
-        if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible)
-        {
-            RenderText(text_pos + ImVec2(offsets->OffsetLabel, 0.0f), label);
-            if (icon_w > 0.0f)
-                RenderText(text_pos + ImVec2(offsets->OffsetIcon, 0.0f), icon);
-            if (shortcut_w > 0.0f)
-            {
-                PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
-                LogSetNextTextDecoration("(", ")");
-                RenderText(text_pos + ImVec2(offsets->OffsetShortcut + stretch_w, 0.0f), shortcut, NULL, false);
-                PopStyleColor();
-            }
-            if (selected)
-                RenderCheckMark(window->DrawList, text_pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
-        }
+// (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
+//  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
+float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
+float shortcut_w = (shortcut && shortcut[0]) ? CalcTextSize(shortcut, NULL).x : 0.0f;
+float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
+float min_w = window->DC.MenuColumns.DeclColumns(icon_w, label_size.x, shortcut_w, checkmark_w); // Feedback for next frame
+float stretch_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
+ImVec2 text_pos(pos.x, pos.y + window->DC.CurrLineTextBaseOffset);
+pressed = Selectable("", false, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth, ImVec2(min_w, label_size.y));
+if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible)
+{
+	RenderText(text_pos + ImVec2(offsets->OffsetLabel, 0.0f), label);
+	if (icon_w > 0.0f)
+	{
+		RenderText(text_pos + ImVec2(offsets->OffsetIcon, 0.0f), icon);
+	}
+	if (shortcut_w > 0.0f)
+	{
+		PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
+		LogSetNextTextDecoration("(", ")");
+		RenderText(text_pos + ImVec2(offsets->OffsetShortcut + stretch_w, 0.0f), shortcut, NULL, false);
+		PopStyleColor();
+	}
+	if (selected)
+	{
+		RenderCheckMark(window->DrawList, text_pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
+	}
+}
+
     }
     IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     if (!enabled)

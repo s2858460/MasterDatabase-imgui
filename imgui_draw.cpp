@@ -147,8 +147,8 @@ namespace IMGUI_STB_NAMESPACE
 #define STBTT_sqrt(x)       ImSqrt(x)
 #define STBTT_pow(x,y)      ImPow(x,y)
 #define STBTT_fabs(x)       ImFabs(x)
-#define STBTT_ifloor(x)     ((int)ImFloor(x))
-#define STBTT_iceil(x)      ((int)ImCeil(x))
+#define STBTT_ifloor(x)     static_cast<int>(ImFloor(x))
+#define STBTT_iceil(x)      static_cast<int>(ImCeil(x))
 #define STBTT_strlen(x)     ImStrlen(x)
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -162,6 +162,7 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #endif
 #endif // IMGUI_ENABLE_STB_TRUETYPE
+
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
@@ -552,10 +553,10 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t use
         IM_ASSERT(userdata != NULL);
         IM_ASSERT(userdata_size < (1u << 31));
         curr_cmd->UserCallbackData = NULL; // Will be resolved during Render()
-        curr_cmd->UserCallbackDataSize = (int)userdata_size;
+        curr_cmd->UserCallbackDataSize = static_cast<int>(userdata_size);
         curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
-        _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + (int)userdata_size);
-        memcpy(_CallbacksDataBuf.Data + (size_t)curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
+        _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + static_cast<int>(userdata_size));
+        memcpy(_CallbacksDataBuf.Data + static_cast<size_t>(curr_cmd->UserCallbackDataOffset), userdata, userdata_size);
     }
 
     AddDrawCmd(); // Force a new command after us (see comment below)
@@ -4199,7 +4200,7 @@ ImVec2i ImFontAtlasTextureGetSizeEstimate(ImFontAtlas* atlas)
     min_w = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.x), min_w);
     min_h = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.y), min_h);
     const int surface_approx = builder->RectsPackedSurface - builder->RectsDiscardedSurface; // Expected surface after repack
-    const int surface_sqrt = (int)sqrtf((float)surface_approx);
+    const int surface_sqrt = (int)trunc(sqrtf((float)surface_approx));
 
     int new_tex_w;
     int new_tex_h;
@@ -4221,6 +4222,7 @@ ImVec2i ImFontAtlasTextureGetSizeEstimate(ImFontAtlas* atlas)
     IM_ASSERT(ImIsPowerOfTwo(new_tex_w) && ImIsPowerOfTwo(new_tex_h));
     return ImVec2i(new_tex_w, new_tex_h);
 }
+
 
 // Clear all output. Invalidates all AddCustomRect() return values!
 void ImFontAtlasBuildClear(ImFontAtlas* atlas)
@@ -4493,8 +4495,9 @@ static void ImFontAtlas_FontHookRemapCodepoint(ImFontAtlas* atlas, ImFont* font,
 {
     IM_UNUSED(atlas);
     if (font->RemapPairs.Data.Size != 0)
-        *c = (ImWchar)font->RemapPairs.GetInt((ImGuiID)*c, (int)*c);
+        *c = static_cast<ImWchar>(font->RemapPairs.GetInt((ImGuiID)*c, (int)*c));
 }
+
 
 static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codepoint, float* only_load_advance_x)
 {
@@ -4685,9 +4688,10 @@ static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFon
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data != NULL);
 
-    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
+    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, static_cast<int>(codepoint));
     return glyph_index != 0;
 }
+
 
 static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*)
 {
@@ -4712,7 +4716,7 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
     // Search for first font which has the glyph
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data);
-    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
+    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, static_cast<int>(codepoint));
     if (glyph_index == 0)
         return false;
 
@@ -4785,8 +4789,8 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
         // glyph.X0, glyph.Y0 are drawing coordinates from base text position, and accounting for oversampling.
         out_glyph->X0 = x0 * recip_h + font_off_x;
         out_glyph->Y0 = y0 * recip_v + font_off_y;
-        out_glyph->X1 = (x0 + (int)r->w) * recip_h + font_off_x;
-        out_glyph->Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
+        out_glyph->X1 = (x0 + static_cast<int>(r->w)) * recip_h + font_off_x;
+        out_glyph->Y1 = (y0 + static_cast<int>(r->h)) * recip_v + font_off_y;
         out_glyph->Visible = true;
         out_glyph->PackId = pack_id;
         ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, out_glyph, r, bitmap_pixels, ImTextureFormat_Alpha8, w);
@@ -5276,15 +5280,16 @@ void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, 
 
 void ImFont::AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint)
 {
-    RemapPairs.SetInt((ImGuiID)from_codepoint, (int)to_codepoint);
+    RemapPairs.SetInt(static_cast<ImGuiID>(from_codepoint), static_cast<int>(to_codepoint));
 }
+
 
 // Find glyph, load if necessary, return fallback if missing
 ImFontGlyph* ImFontBaked::FindGlyph(ImWchar c)
 {
-    if (c < (size_t)IndexLookup.Size) IM_LIKELY
+    if (c < static_cast<size_t>(IndexLookup.Size)) IM_LIKELY
     {
-        const int i = (int)IndexLookup.Data[c];
+        const int i = static_cast<int>(IndexLookup.Data[c]);
         if (i == IM_FONTGLYPH_INDEX_NOT_FOUND)
             return &Glyphs.Data[FallbackGlyphIndex];
         if (i != IM_FONTGLYPH_INDEX_UNUSED)
@@ -5297,9 +5302,9 @@ ImFontGlyph* ImFontBaked::FindGlyph(ImWchar c)
 // Attempt to load but when missing, return NULL instead of FallbackGlyph
 ImFontGlyph* ImFontBaked::FindGlyphNoFallback(ImWchar c)
 {
-    if (c < (size_t)IndexLookup.Size) IM_LIKELY
+    if (c < static_cast<size_t>(IndexLookup.Size)) IM_LIKELY
     {
-        const int i = (int)IndexLookup.Data[c];
+        const int i = static_cast<int>(IndexLookup.Data[c]);
         if (i == IM_FONTGLYPH_INDEX_NOT_FOUND)
             return NULL;
         if (i != IM_FONTGLYPH_INDEX_UNUSED)
@@ -5313,9 +5318,9 @@ ImFontGlyph* ImFontBaked::FindGlyphNoFallback(ImWchar c)
 
 bool ImFontBaked::IsGlyphLoaded(ImWchar c)
 {
-    if (c < (size_t)IndexLookup.Size) IM_LIKELY
+    if (c < static_cast<size_t>(IndexLookup.Size)) IM_LIKELY
     {
-        const int i = (int)IndexLookup.Data[c];
+        const int i = static_cast<int>(IndexLookup.Data[c]);
         if (i == IM_FONTGLYPH_INDEX_NOT_FOUND)
             return false;
         if (i != IM_FONTGLYPH_INDEX_UNUSED)
@@ -5323,6 +5328,7 @@ bool ImFontBaked::IsGlyphLoaded(ImWchar c)
     }
     return false;
 }
+
 
 // This is not fast query
 bool ImFont::IsGlyphInFont(ImWchar c)
@@ -5342,7 +5348,7 @@ bool ImFont::IsGlyphInFont(ImWchar c)
 IM_MSVC_RUNTIME_CHECKS_OFF
 float ImFontBaked::GetCharAdvance(ImWchar c)
 {
-    if ((int)c < IndexAdvanceX.Size)
+    if (static_cast<int>(c) < IndexAdvanceX.Size)
     {
         // Missing glyphs fitting inside index will have stored FallbackAdvanceX already.
         const float x = IndexAdvanceX.Data[c];
@@ -5352,6 +5358,7 @@ float ImFontBaked::GetCharAdvance(ImWchar c)
     return ImFontBaked_BuildLoadGlyphAdvanceX(this, c);
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
+
 
 ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size, float rasterizer_density)
 {

@@ -3622,12 +3622,17 @@ void ImParseFormatSanitizeForPrinting(const char* fmt_in, char* fmt_out, size_t 
     IM_ASSERT((size_t)(fmt_end - fmt_in + 1) < fmt_out_size); // Format is too long, let us know if this happens to you!
     while (fmt_in < fmt_end)
     {
-        char c = *fmt_in++;
+        char c = *fmt_in;
+        fmt_in++;
         if (c != '\'' && c != '$' && c != '_') // Custom flags provided by stb_sprintf.h. POSIX 2008 also supports '.
-            *(fmt_out++) = c;
+        {
+            *fmt_out = c;
+            fmt_out++;
+        }
     }
     *fmt_out = 0; // Zero-terminate
 }
+
 
 // - For scanning we need to remove all width and precision fields and flags "%+3.7f" -> "%f". BUT don't strip types like "%I64d" which includes digits. ! "%07I64d" -> "%I64d"
 const char* ImParseFormatSanitizeForScanning(const char* fmt_in, char* fmt_out, size_t fmt_out_size)
@@ -3639,17 +3644,20 @@ const char* ImParseFormatSanitizeForScanning(const char* fmt_in, char* fmt_out, 
     bool has_type = false;
     while (fmt_in < fmt_end)
     {
-        char c = *fmt_in++;
+        char c = *fmt_in;
+        fmt_in++;
         if (!has_type && ((c >= '0' && c <= '9') || c == '.' || c == '+' || c == '#'))
             continue;
         has_type |= ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')); // Stop skipping digits
         if (c != '\'' && c != '$' && c != '_') // Custom flags provided by stb_sprintf.h. POSIX 2008 also supports '.
-            *(fmt_out++) = c;
+        {
+            *fmt_out = c;
+            fmt_out++;
+        }
     }
     *fmt_out = 0; // Zero-terminate
     return fmt_out_begin;
 }
-
 template<typename TYPE>
 static const char* ImAtoi(const char* src, TYPE* output)
 {
@@ -3658,10 +3666,14 @@ static const char* ImAtoi(const char* src, TYPE* output)
     if (*src == '+') { src++; }
     TYPE v = 0;
     while (*src >= '0' && *src <= '9')
-        v = (v * 10) + (*src++ - '0');
+    {
+        v = (v * 10) + (*src - '0');
+        src++;
+    }
     *output = negative ? -v : v;
     return src;
 }
+
 
 // Parse display precision back from the display format string
 // FIXME: This is still used by some navigation code path to infer a minimum tweak step, but we should aim to rework widgets so it isn't needed.
@@ -4556,7 +4568,6 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
         memcpy(g.InputTextDeactivatedState.TextA.Data, state->TextA.Data, state->TextLen + 1);
     }
 }
-
 static int* ImLowerBound(int* in_begin, int* in_end, int v)
 {
     int* in_p = in_begin;
@@ -4566,7 +4577,8 @@ static int* ImLowerBound(int* in_begin, int* in_end, int v)
         int* mid = in_p + count2;
         if (*mid < v)
         {
-            in_p = ++mid;
+            mid++;
+            in_p = mid;
             count -= count2 + 1;
         }
         else
@@ -4576,7 +4588,6 @@ static int* ImLowerBound(int* in_begin, int* in_end, int v)
     }
     return in_p;
 }
-
 // FIXME-WORDWRAP: Bundle some of this into ImGuiTextIndex and/or extract as a different tool?
 // 'max_output_buffer_size' happens to be a meaningful optimization to avoid writing the full line_index when not necessarily needed (e.g. very large buffer, scrolled up, inactive)
 static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* line_index, const char* buf, const char* buf_end, float wrap_width, int max_output_buffer_size, const char** out_buf_end)
@@ -4586,31 +4597,39 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
     const char* s;
     if (flags & ImGuiInputTextFlags_WordWrap)
     {
-        for (s = buf; s < buf_end; s = (*s == '\n') ? s + 1 : s)
+        for (s = buf; s < buf_end; )
         {
-            if (size++ <= max_output_buffer_size)
+            if (size <= max_output_buffer_size)
                 line_index->Offsets.push_back((int)(s - buf));
+            size++;
+            s = (*s == '\n') ? s + 1 : s;
             s = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, s, buf_end, wrap_width, ImDrawTextFlags_WrapKeepBlanks);
         }
     }
     else if (buf_end != NULL)
     {
-        for (s = buf; s < buf_end; s = s ? s + 1 : buf_end)
+        for (s = buf; s < buf_end; )
         {
-            if (size++ <= max_output_buffer_size)
+            if (size <= max_output_buffer_size)
                 line_index->Offsets.push_back((int)(s - buf));
+            size++;
+            s = s ? s + 1 : buf_end;
             s = (const char*)ImMemchr(s, '\n', buf_end - s);
         }
     }
     else
     {
         const char* s_eol;
-        for (s = buf; ; s = s_eol + 1)
+        for (s = buf; ; )
         {
-            if (size++ <= max_output_buffer_size)
+            if (size <= max_output_buffer_size)
                 line_index->Offsets.push_back((int)(s - buf));
+            size++;
             if ((s_eol = strchr(s, '\n')) != NULL)
+            {
+                s = s_eol + 1;
                 continue;
+            }
             s += strlen(s);
             break;
         }
@@ -7597,10 +7616,15 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
 static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
 {
     int match_len = 0;
-    while (s1 < s1_end && ImToUpper(*s1++) == ImToUpper(*s2++))
+    while (s1 < s1_end && ImToUpper(*s1) == ImToUpper(*s2))
+    {
+        s1++;
+        s2++;
         match_len++;
+    }
     return match_len;
 }
+
 
 // Default handler for finding a result for typing-select. You may implement your own.
 // You might want to display a tooltip to visualize the current request SearchBuffer

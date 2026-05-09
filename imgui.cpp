@@ -2164,9 +2164,14 @@ int ImStrlenW(const ImWchar* str)
 {
     //return (int)wcslen((const wchar_t*)str);  // FIXME-OPT: Could use this when wchar_t are 16-bit
     int n = 0;
-    while (*str++) n++;
+    while (*str)
+    {
+        str++;
+        n++;
+    }
     return n;
 }
+
 
 // Find end-of-line. Return pointer will point to either first \n, either str_end.
 const char* ImStreolRange(const char* str, const char* str_end)
@@ -2386,7 +2391,10 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 #ifndef IMGUI_ENABLE_SSE4_2_CRC
     const ImU32* crc32_lut = GCrc32LookupTable;
     while (data < data_end)
-        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
+    {
+        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data];
+        data++;
+    }
     return ~crc;
 #else
     while (data + 4 <= data_end)
@@ -2395,7 +2403,10 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
         data += 4;
     }
     while (data < data_end)
-        crc = _mm_crc32_u8(crc, *data++);
+    {
+        crc = _mm_crc32_u8(crc, *data);
+        data++;
+    }
     return ~crc;
 #endif
 }

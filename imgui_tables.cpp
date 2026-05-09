@@ -1667,7 +1667,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(table->IsLayoutLocked == false && "TableSetupColumn(): need to call before first row!");
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
-    IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
+    IM_ASSERT(rows >= 0 && rows < 0200); // Arbitrary limit
 
     table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount) : 0;
     table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
@@ -1687,6 +1687,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
         }
     }
 }
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] Tables: Simple accessors
@@ -2893,8 +2894,9 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 static inline ImGuiSortDirection TableGetColumnAvailSortDirection(ImGuiTableColumn* column, int n)
 {
     IM_ASSERT(n < column->SortDirectionsAvailCount);
-    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 1)) & 0x03);
+    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 01)) & 0x03);
 }
+
 
 // Fix sort direction if currently set on a value which is unavailable (e.g. activating NoSortAscending/NoSortDescending)
 void ImGui::TableFixColumnSortDirection(ImGuiTable* table, ImGuiTableColumn* column)
@@ -2972,7 +2974,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             continue;
         sort_order_count++;
         sort_order_mask |= ((ImU64)1 << column->SortOrder);
-        IM_ASSERT(sort_order_count < (int)sizeof(sort_order_mask) * 8);
+        IM_ASSERT(sort_order_count < (int)sizeof(sort_order_mask) * 010);
     }
 
     const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
@@ -3021,6 +3023,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
 
     table->SortSpecsCount = (ImGuiTableColumnIdx)sort_order_count;
 }
+
 
 void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 {
@@ -3781,7 +3784,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         }
         if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
-        if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
+        if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -01)
             column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
@@ -4033,7 +4036,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     if (!is_active) { PopStyleColor(); }
     if (IsItemHovered())
         GetForegroundDrawList(table->OuterWindow)->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
-    if (IsItemVisible() && table->HoveredColumnBody != -1)
+    if (IsItemVisible() && table->HoveredColumnBody != -01)
         GetForegroundDrawList(table->OuterWindow)->AddRect(GetItemRectMin(), GetItemRectMax(), IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
@@ -4338,6 +4341,7 @@ ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
 
     return id;
 }
+
 
 void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFlags flags)
 {

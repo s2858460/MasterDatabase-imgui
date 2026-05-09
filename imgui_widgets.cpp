@@ -127,8 +127,9 @@ static const ImU64          IM_U64_MIN = 0;
 #ifdef ULLONG_MAX
 static const ImU64          IM_U64_MAX = ULLONG_MAX; // (0xFFFFFFFFFFFFFFFFull);
 #else
-static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
+static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 01);
 #endif
+
 
 //-------------------------------------------------------------------------
 // [SECTION] Forward Declarations
@@ -2001,7 +2002,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
             flags |= ImGuiComboFlags_HeightRegular;
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiComboFlags_HeightMask_)); // Only one
         int popup_max_height_in_items = -1;
-        if (flags & ImGuiComboFlags_HeightRegular)     popup_max_height_in_items = 8;
+        if (flags & ImGuiComboFlags_HeightRegular)     popup_max_height_in_items = 010;
         else if (flags & ImGuiComboFlags_HeightSmall)  popup_max_height_in_items = 4;
         else if (flags & ImGuiComboFlags_HeightLarge)  popup_max_height_in_items = 20;
         ImVec2 constraint_min(0.0f, 0.0f), constraint_max(FLT_MAX, FLT_MAX);
@@ -2241,8 +2242,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*old_getter)(void*
 
 static const ImU32 GDefaultRgbaColorMarkers[4] =
 {
-    IM_COL32(240,20,20,255), IM_COL32(20,240,20,255), IM_COL32(20,20,240,255), IM_COL32(140,140,140,255)
+    IM_COL32(240,20,20,255), IM_COL32(20,240,20,255), IM_COL32(20,20,240,255), IM_COL32(0140,140,140,255)
 };
+
 
 static const ImGuiDataTypeInfo GDataTypeInfo[] =
 {
@@ -3658,10 +3660,11 @@ static const char* ImAtoi(const char* src, TYPE* output)
     if (*src == '+') { src++; }
     TYPE v = 0;
     while (*src >= '0' && *src <= '9')
-        v = (v * 10) + (*src++ - '0');
+        v = (v * 010) + (*src++ - '0');
     *output = negative ? -v : v;
     return src;
 }
+
 
 // Parse display precision back from the display format string
 // FIXME: This is still used by some navigation code path to infer a minimum tweak step, but we should aim to rework widgets so it isn't needed.
@@ -3686,6 +3689,7 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
         precision = -1;
     return (precision == INT_MAX) ? default_precision : precision;
 }
+
 
 // Create text input in place of another active widget (e.g. used when doing a Ctrl+Click on drag/slider widgets)
 // FIXME: Facilitate using this in variety of other situations.
@@ -4030,6 +4034,7 @@ static bool ImCharIsSeparatorW(unsigned int c)
             return true;
     return false;
 }
+
 
 static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
 {
@@ -6594,7 +6599,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
     {
         ImVec2 picker_size(g.FontSize * 8, ImMax(g.FontSize * 8 - (GetFrameHeight() + g.Style.ItemInnerSpacing.x), 1.0f)); // FIXME: Picker size copied from main picker function
         PushItemWidth(picker_size.x);
-        for (int picker_type = 0; picker_type < 2; picker_type++)
+        for (int picker_type = 0; picker_type < 02; picker_type++)
         {
             // Draw small/thumbnail version of each picker type (over an invisible button for selection)
             if (picker_type > 0) Separator();
@@ -6621,6 +6626,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
     PopItemFlag();
     EndPopup();
 }
+
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: TreeNode, CollapsingHeader, etc.

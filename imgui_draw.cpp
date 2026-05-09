@@ -1198,31 +1198,41 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
     if (a_max_sample >= a_min_sample)
     {
-        for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
-        {
-            // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
-            if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
-                sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        for (int a = a_min_sample; a <= a_max_sample; )
+{
+    // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
+    if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+        sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
-            const ImVec2 s = _Data->ArcFastVtx[sample_index];
-            out_ptr->x = center.x + s.x * radius;
-            out_ptr->y = center.y + s.y * radius;
-            out_ptr++;
-        }
+    const ImVec2 s = _Data->ArcFastVtx[sample_index];
+    out_ptr->x = center.x + s.x * radius;
+    out_ptr->y = center.y + s.y * radius;
+    out_ptr = (out_ptr, out_ptr + 1);
+
+    a += a_step;
+    sample_index += a_step;
+    a_step = a_next_step;
+}
+
     }
     else
     {
-        for (int a = a_min_sample; a >= a_max_sample; a -= a_step, sample_index -= a_step, a_step = a_next_step)
-        {
-            // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
-            if (sample_index < 0)
-                sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        for (int a = a_min_sample; a >= a_max_sample; )
+{
+    // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
+    if (sample_index < 0)
+        sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
-            const ImVec2 s = _Data->ArcFastVtx[sample_index];
-            out_ptr->x = center.x + s.x * radius;
-            out_ptr->y = center.y + s.y * radius;
-            out_ptr++;
-        }
+    const ImVec2 s = _Data->ArcFastVtx[sample_index];
+    out_ptr->x = center.x + s.x * radius;
+    out_ptr->y = center.y + s.y * radius;
+    out_ptr = (out_ptr, out_ptr + 1);
+
+    a -= a_step;
+    sample_index -= a_step;
+    a_step = a_next_step;
+}
+
     }
 
     if (extra_max_sample)
@@ -1895,28 +1905,35 @@ void ImTriangulator::BuildNodes(const ImVec2* points, int points_count)
 void ImTriangulator::BuildReflexes()
 {
     ImTriangulatorNode* n1 = _Nodes;
-    for (int i = _TrianglesLeft; i >= 0; i--, n1 = n1->Next)
+    for (int i = _TrianglesLeft; i >= 0; i--)
     {
-        if (ImTriangleIsClockwise(n1->Prev->Pos, n1->Pos, n1->Next->Pos))
-            continue;
-        n1->Type = ImTriangulatorNodeType_Reflex;
-        _Reflexes.push_back(n1);
+        if (!ImTriangleIsClockwise(n1->Prev->Pos, n1->Pos, n1->Next->Pos))
+        {
+            n1->Type = ImTriangulatorNodeType_Reflex;
+            _Reflexes.push_back(n1);
+        }
+        n1 = (n1, n1->Next);
     }
 }
+
 
 void ImTriangulator::BuildEars()
 {
     ImTriangulatorNode* n1 = _Nodes;
-    for (int i = _TrianglesLeft; i >= 0; i--, n1 = n1->Next)
+    for (int i = _TrianglesLeft; i >= 0; i--)
     {
-        if (n1->Type != ImTriangulatorNodeType_Convex)
-            continue;
-        if (!IsEar(n1->Prev->Index, n1->Index, n1->Next->Index, n1->Prev->Pos, n1->Pos, n1->Next->Pos))
-            continue;
-        n1->Type = ImTriangulatorNodeType_Ear;
-        _Ears.push_back(n1);
+        if (n1->Type == ImTriangulatorNodeType_Convex)
+        {
+            if (IsEar(n1->Prev->Index, n1->Index, n1->Next->Index, n1->Prev->Pos, n1->Pos, n1->Next->Pos))
+            {
+                n1->Type = ImTriangulatorNodeType_Ear;
+                _Ears.push_back(n1);
+            }
+        }
+        n1 = (n1, n1->Next);
     }
 }
+
 
 void ImTriangulator::GetNextTriangle(unsigned int out_triangle[3])
 {
@@ -2859,30 +2876,41 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
 {
     IM_ASSERT(src_pixels != NULL && dst_pixels != NULL);
     if (src_fmt == dst_fmt)
+{
+    int line_sz = w * ImTextureDataGetFormatBytesPerPixel(src_fmt);
+    for (int ny = h; ny > 0; ny--)
     {
-        int line_sz = w * ImTextureDataGetFormatBytesPerPixel(src_fmt);
-        for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
-            memcpy(dst_pixels, src_pixels, line_sz);
+        memcpy(dst_pixels, src_pixels, line_sz);
+        src_pixels = (src_pixels += src_pitch, src_pixels);
+        dst_pixels += dst_pitch;
     }
+}
+
     else if (src_fmt == ImTextureFormat_Alpha8 && dst_fmt == ImTextureFormat_RGBA32)
     {
-        for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
-        {
-            const ImU8* src_p = (const ImU8*)src_pixels;
-            ImU32* dst_p = (ImU32*)(void*)dst_pixels;
-            for (int nx = w; nx > 0; nx--)
-                *dst_p++ = IM_COL32(255, 255, 255, (unsigned int)(*src_p++));
-        }
+        for (int ny = h; ny > 0; ny--)
+{
+    const ImU8* src_p = (const ImU8*)src_pixels;
+    ImU32* dst_p = (ImU32*)(void*)dst_pixels;
+    for (int nx = w; nx > 0; nx--)
+        *dst_p++ = IM_COL32(255, 255, 255, (unsigned int)(*src_p++));
+    src_pixels = (src_pixels += src_pitch, src_pixels);
+    dst_pixels += dst_pitch;
+}
+
     }
     else if (src_fmt == ImTextureFormat_RGBA32 && dst_fmt == ImTextureFormat_Alpha8)
     {
-        for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
-        {
-            const ImU32* src_p = (const ImU32*)(void*)src_pixels;
-            ImU8* dst_p = (ImU8*)dst_pixels;
-            for (int nx = w; nx > 0; nx--)
-                *dst_p++ = ((*src_p++) >> IM_COL32_A_SHIFT) & 0xFF;
-        }
+        for (int ny = h; ny > 0; ny--)
+{
+    const ImU32* src_p = (const ImU32*)(void*)src_pixels;
+    ImU8* dst_p = (ImU8*)dst_pixels;
+    for (int nx = w; nx > 0; nx--)
+        *dst_p++ = ((*src_p++) >> IM_COL32_A_SHIFT) & 0xFF;
+    src_pixels = (src_pixels += src_pitch, src_pixels);
+    dst_pixels += dst_pitch;
+}
+
     }
     else
     {
@@ -2905,27 +2933,33 @@ void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data
     int pitch = data->Pitch;
     if (data->Format == ImTextureFormat_Alpha8)
     {
-        for (int ny = data->Height; ny > 0; ny--, pixels += pitch)
-        {
-            ImU8* p = (ImU8*)pixels;
-            for (int nx = data->Width; nx > 0; nx--, p++)
-            {
-                unsigned int v = ImMin((unsigned int)(*p * multiply_factor), (unsigned int)255);
-                *p = (unsigned char)v;
-            }
-        }
+        for (int ny = data->Height; ny > 0; ny--)
+{
+    ImU8* p = (ImU8*)pixels;
+    for (int nx = data->Width; nx > 0; nx--)
+    {
+        unsigned int v = ImMin((unsigned int)(*p * multiply_factor), (unsigned int)255);
+        *p = (unsigned char)v;
+        p = (p, p + 1);
+    }
+    pixels += pitch;
+}
+
     }
     else if (data->Format == ImTextureFormat_RGBA32) //-V547
     {
-        for (int ny = data->Height; ny > 0; ny--, pixels += pitch)
-        {
-            ImU32* p = (ImU32*)(void*)pixels;
-            for (int nx = data->Width; nx > 0; nx--, p++)
-            {
-                unsigned int a = ImMin((unsigned int)(((*p >> IM_COL32_A_SHIFT) & 0xFF) * multiply_factor), (unsigned int)255);
-                *p = IM_COL32((*p >> IM_COL32_R_SHIFT) & 0xFF, (*p >> IM_COL32_G_SHIFT) & 0xFF, (*p >> IM_COL32_B_SHIFT) & 0xFF, a);
-            }
-        }
+        for (int ny = data->Height; ny > 0; ny--)
+{
+    ImU32* p = (ImU32*)(void*)pixels;
+    for (int nx = data->Width; nx > 0; nx--)
+    {
+        unsigned int a = ImMin((unsigned int)(((*p >> IM_COL32_A_SHIFT) & 0xFF) * multiply_factor), (unsigned int)255);
+        *p = IM_COL32((*p >> IM_COL32_R_SHIFT) & 0xFF, (*p >> IM_COL32_G_SHIFT) & 0xFF, (*p >> IM_COL32_B_SHIFT) & 0xFF, a);
+        p = (p, p + 1);
+    }
+    pixels += pitch;
+}
+
     }
     else
     {
@@ -2944,12 +2978,16 @@ void ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, i
     }
     else
     {
-        for (int y = 0; y < h; y++)
-        {
-            ImU32* p = (ImU32*)(void*)dst_tex->GetPixelsAt(dst_x, dst_y + y);
-            for (int x = w; x > 0; x--, p++)
-                *p = col;
-        }
+       for (int y = 0; y < h; y++)
+{
+    ImU32* p = (ImU32*)(void*)dst_tex->GetPixelsAt(dst_x, dst_y + y);
+    for (int x = w; x > 0; x--)
+    {
+        *p = col;
+        p = (p, p + 1);
+    }
+}
+
     }
 }
 
@@ -3071,13 +3109,18 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     // Sanity check
     // We don't round cfg.SizePixels yet as relative size of merged fonts are used afterwards.
     if (font_cfg->GlyphExcludeRanges != NULL)
+{
+    int size = 0;
+    for (const ImWchar* p = font_cfg->GlyphExcludeRanges; p[0] != 0; )
     {
-        int size = 0;
-        for (const ImWchar* p = font_cfg->GlyphExcludeRanges; p[0] != 0; p++, size++) {}
-        IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
-        IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
-        font_cfg->GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
+        p = (p, p + 1);
+        size++;
     }
+    IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
+    IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
+    font_cfg->GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
+}
+
     if (font_cfg->FontLoader != NULL)
     {
         IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
@@ -3524,21 +3567,33 @@ void ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, in
     switch (tex->Format)
     {
     case ImTextureFormat_Alpha8:
+{
+    ImU8* out_p = (ImU8*)tex->GetPixelsAt(x, y);
+    for (int off_y = 0; off_y < h; off_y++)
     {
-        ImU8* out_p = (ImU8*)tex->GetPixelsAt(x, y);
-        for (int off_y = 0; off_y < h; off_y++, out_p += tex->Width, in_str += w)
-            for (int off_x = 0; off_x < w; off_x++)
-                out_p[off_x] = (in_str[off_x] == in_marker_char) ? 0xFF : 0x00;
-        break;
+        for (int off_x = 0; off_x < w; off_x++)
+            out_p[off_x] = (in_str[off_x] == in_marker_char) ? 0xFF : 0x00;
+
+        out_p = (out_p += tex->Width, out_p);
+        in_str += w;
     }
+    break;
+}
+
     case ImTextureFormat_RGBA32:
+{
+    ImU32* out_p = (ImU32*)tex->GetPixelsAt(x, y);
+    for (int off_y = 0; off_y < h; off_y++)
     {
-        ImU32* out_p = (ImU32*)tex->GetPixelsAt(x, y);
-        for (int off_y = 0; off_y < h; off_y++, out_p += tex->Width, in_str += w)
-            for (int off_x = 0; off_x < w; off_x++)
-                out_p[off_x] = (in_str[off_x] == in_marker_char) ? IM_COL32_WHITE : IM_COL32_BLACK_TRANS;
-        break;
+        for (int off_x = 0; off_x < w; off_x++)
+            out_p[off_x] = (in_str[off_x] == in_marker_char) ? IM_COL32_WHITE : IM_COL32_BLACK_TRANS;
+
+        out_p = (out_p += tex->Width, out_p);
+        in_str += w;
     }
+    break;
+}
+
     }
 }
 

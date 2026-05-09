@@ -9404,12 +9404,15 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
         (key_chord & ImGuiMod_Alt) ? "Alt+" : "",
         (key_chord & ImGuiMod_Super) ? "Super+" : "",
         (key != ImGuiKey_None || key_chord == ImGuiKey_None) ? GetKeyName(key) : "");
-    size_t len;
+    size_t len = ImStrlen(g.TempKeychordName);
     if (key == ImGuiKey_None && key_chord != 0)
-        if ((len = ImStrlen(g.TempKeychordName)) != 0) // Remove trailing '+'
+    {
+        if (len != 0) // Remove trailing '+'
             g.TempKeychordName[len - 1] = 0;
+    }
     return g.TempKeychordName;
 }
+
 
 // t0 = previous time (e.g.: g.Time - g.IO.DeltaTime)
 // t1 = current time (e.g.: g.Time)
@@ -15538,9 +15541,13 @@ void ImGui::ClearWindowSettings(const char* name)
         window->Flags |= ImGuiWindowFlags_NoSavedSettings;
         InitOrLoadWindowSettings(window, NULL);
     }
-    if (ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByID(ImHashStr(name)))
+
+    ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByID(ImHashStr(name));
+
+    if (settings)
         settings->WantDelete = true;
 }
+
 
 static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {

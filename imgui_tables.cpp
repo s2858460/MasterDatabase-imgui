@@ -271,31 +271,23 @@ static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/tim
 // Helper
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
-    // Adjust flags: set default sizing policy
-    if ((flags & ImGuiTableFlags_SizingMask_) == 0)
-        flags |= ((flags & ImGuiTableFlags_ScrollX) || (outer_window->Flags & ImGuiWindowFlags_AlwaysAutoResize)) ? ImGuiTableFlags_SizingFixedFit : ImGuiTableFlags_SizingStretchSame;
+    flags |= ((flags & ImGuiTableFlags_ScrollX) || (outer_window->Flags & ImGuiWindowFlags_AlwaysAutoResize)) ? ImGuiTableFlags_SizingFixedFit : ImGuiTableFlags_SizingStretchSame;
 
-    // Adjust flags: enable NoKeepColumnsVisible when using ImGuiTableFlags_SizingFixedSame
     if ((flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedSame)
         flags |= ImGuiTableFlags_NoKeepColumnsVisible;
 
-    // Adjust flags: enforce borders when resizable
     if (flags & ImGuiTableFlags_Resizable)
         flags |= ImGuiTableFlags_BordersInnerV;
 
-    // Adjust flags: disable NoHostExtendX/NoHostExtendY if we have any scrolling going on
     if (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
         flags &= ~(ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_NoHostExtendY);
 
-    // Adjust flags: NoBordersInBodyUntilResize takes priority over NoBordersInBody
     if (flags & ImGuiTableFlags_NoBordersInBodyUntilResize)
         flags &= ~ImGuiTableFlags_NoBordersInBody;
 
-    // Adjust flags: disable saved settings if there's nothing to save
     if ((flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable)) == 0)
         flags |= ImGuiTableFlags_NoSavedSettings;
 
-    // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
     if (outer_window->RootWindow->Flags & ImGuiWindowFlags_NoSavedSettings)
         flags |= ImGuiTableFlags_NoSavedSettings;
 
@@ -1616,19 +1608,18 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     IM_ASSERT_USER_ERROR_RET(table->IsLayoutLocked == false, "TableSetupColumn(): need to call before first row!");
     IM_ASSERT((flags & ImGuiTableColumnFlags_StatusMask_) == 0 && "Illegal to pass StatusMask values to TableSetupColumn()");
 
+    flags |= ImGuiTableColumnFlags_WidthFixed;
+
     ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];
     table->DeclColumnsCount++;
 
-    // Assert when passing a width or weight if policy is entirely left to default, to avoid storing width into weight and vice-versa.
-    // Give a grace to users of ImGuiTableFlags_ScrollX.
     if (table->IsDefaultSizingPolicy && (flags & ImGuiTableColumnFlags_WidthMask_) == 0 && (flags & ImGuiTableFlags_ScrollX) == 0)
         IM_ASSERT_USER_ERROR_RET(init_width_or_weight <= 0.0f, "TableSetupColumn(): can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
 
-    // When passing a width automatically enforce WidthFixed policy
-    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not resizable)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0 && init_width_or_weight > 0.0f)
         if ((table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedFit || (table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedSame)
             flags |= ImGuiTableColumnFlags_WidthFixed;
+
     if (flags & ImGuiTableColumnFlags_AngledHeader)
     {
         flags |= ImGuiTableColumnFlags_NoHeaderLabel;
@@ -1637,9 +1628,9 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
 
     TableSetupColumnFlags(table, column, flags);
     column->UserID = user_id;
-    flags = column->Flags;
 
-    // Initialize defaults
+    const ImGuiTableColumnFlags final_flags = column->Flags;
+
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing)
     {
@@ -1649,8 +1640,6 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         TableInitColumnDefaults(table, column, init_flags);
     }
 
-    // Store name (append with zero-terminator in contiguous buffer)
-    // FIXME: If we recorded the number of \n in names we could compute header row height
     column->NameOffset = -1;
     if (label != NULL && label[0] != 0)
     {

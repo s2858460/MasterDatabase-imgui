@@ -6354,106 +6354,91 @@ bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, ImGuiChildFlags child
 {
     return BeginChildEx(NULL, id, size_arg, child_flags, window_flags);
 }
-
 bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, ImGuiChildFlags child_flags, ImGuiWindowFlags window_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
     IM_ASSERT(id != 0);
 
-    // Sanity check as it is likely that some user will accidentally pass ImGuiWindowFlags into the ImGuiChildFlags argument.
+    ImGuiChildFlags cf = child_flags;
+    child_flags |= ImGuiChildFlags_Borders;
+
     const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_NavFlattened;
     IM_UNUSED(ImGuiChildFlags_SupportedMask_);
-    IM_ASSERT((child_flags & ~ImGuiChildFlags_SupportedMask_) == 0 && "Illegal ImGuiChildFlags value. Did you pass ImGuiWindowFlags values instead of ImGuiChildFlags?");
-    IM_ASSERT((window_flags & ImGuiWindowFlags_AlwaysAutoResize) == 0 && "Cannot specify ImGuiWindowFlags_AlwaysAutoResize for BeginChild(). Use ImGuiChildFlags_AlwaysAutoResize!");
-    if (child_flags & ImGuiChildFlags_AlwaysAutoResize)
-    {
-        IM_ASSERT((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0 && "Cannot use ImGuiChildFlags_ResizeX or ImGuiChildFlags_ResizeY with ImGuiChildFlags_AlwaysAutoResize!");
-        IM_ASSERT((child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0 && "Must use ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY with ImGuiChildFlags_AlwaysAutoResize!");
-    }
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    //if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding) { child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding; }
-    //if (window_flags & ImGuiWindowFlags_NavFlattened) { child_flags |= ImGuiChildFlags_NavFlattened; }
-#endif
-    if (child_flags & ImGuiChildFlags_AutoResizeX)
-        child_flags &= ~ImGuiChildFlags_ResizeX;
-    if (child_flags & ImGuiChildFlags_AutoResizeY)
-        child_flags &= ~ImGuiChildFlags_ResizeY;
+    IM_ASSERT((cf & ~ImGuiChildFlags_SupportedMask_) == 0);
+    IM_ASSERT((window_flags & ImGuiWindowFlags_AlwaysAutoResize) == 0);
 
-    // Set window flags
+    if (cf & ImGuiChildFlags_AlwaysAutoResize)
+    {
+        IM_ASSERT((cf & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0);
+        IM_ASSERT((cf & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0);
+    }
+
+    if (cf & ImGuiChildFlags_AutoResizeX)
+        cf &= ~ImGuiChildFlags_ResizeX;
+    if (cf & ImGuiChildFlags_AutoResizeY)
+        cf &= ~ImGuiChildFlags_ResizeY;
+
     window_flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar;
-    window_flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove); // Inherit the NoMove flag
-    if (child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize))
+    window_flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove);
+
+    if (cf & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize))
         window_flags |= ImGuiWindowFlags_AlwaysAutoResize;
-    if ((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
+
+    if ((cf & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
         window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
 
-    // Special framed style
-    if (child_flags & ImGuiChildFlags_FrameStyle)
+    if (cf & ImGuiChildFlags_FrameStyle)
     {
         PushStyleColor(ImGuiCol_ChildBg, g.Style.Colors[ImGuiCol_FrameBg]);
         PushStyleVar(ImGuiStyleVar_ChildRounding, g.Style.FrameRounding);
         PushStyleVar(ImGuiStyleVar_ChildBorderSize, g.Style.FrameBorderSize);
         PushStyleVar(ImGuiStyleVar_WindowPadding, g.Style.FramePadding);
-        child_flags |= ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
+        cf |= ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
         window_flags |= ImGuiWindowFlags_NoMove;
     }
 
-    // Forward size
-    // Important: Begin() has special processing to switch condition to ImGuiCond_FirstUseEver for a given axis when ImGuiChildFlags_ResizeXXX is set.
-    // (the alternative would to store conditional flags per axis, which is possible but more code)
     const ImVec2 size_avail = GetContentRegionAvail();
-    const ImVec2 size_default((child_flags & ImGuiChildFlags_AutoResizeX) ? 0.0f : size_avail.x, (child_flags & ImGuiChildFlags_AutoResizeY) ? 0.0f : size_avail.y);
+    const ImVec2 size_default((cf & ImGuiChildFlags_AutoResizeX) ? 0.0f : size_avail.x, (cf & ImGuiChildFlags_AutoResizeY) ? 0.0f : size_avail.y);
     ImVec2 size = CalcItemSize(size_arg, size_default.x, size_default.y);
 
-    // A SetNextWindowSize() call always has priority (#8020)
-    // (since the code in Begin() never supported SizeVal==0.0f aka auto-resize via SetNextWindowSize() call, we don't support it here for now)
-    // FIXME: We only support ImGuiCond_Always in this path. Supporting other paths would requires to obtain window pointer.
     if ((g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSize) != 0 && (g.NextWindowData.SizeCond & ImGuiCond_Always) != 0)
     {
         if (g.NextWindowData.SizeVal.x > 0.0f)
         {
             size.x = g.NextWindowData.SizeVal.x;
-            child_flags &= ~ImGuiChildFlags_ResizeX;
+            cf &= ~ImGuiChildFlags_ResizeX;
         }
         if (g.NextWindowData.SizeVal.y > 0.0f)
         {
             size.y = g.NextWindowData.SizeVal.y;
-            child_flags &= ~ImGuiChildFlags_ResizeY;
+            cf &= ~ImGuiChildFlags_ResizeY;
         }
     }
+
     SetNextWindowSize(size);
 
-    // Forward child flags (we allow prior settings to merge but it'll only work for adding flags)
     if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasChildFlags)
-        g.NextWindowData.ChildFlags |= child_flags;
+        g.NextWindowData.ChildFlags |= cf;
     else
-        g.NextWindowData.ChildFlags = child_flags;
+        g.NextWindowData.ChildFlags = cf;
+
     g.NextWindowData.HasFlags |= ImGuiNextWindowDataFlags_HasChildFlags;
 
-    // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
-    // FIXME: 2023/11/14: commented out shorted version. We had an issue with multiple ### in child window path names, which the trailing hash helped workaround.
-    // e.g. "ParentName###ParentIdentifier/ChildName###ChildIdentifier" would get hashed incorrectly by ImHashStr(), trailing _%08X somehow fixes it.
     const char* temp_window_name;
-    /*if (name && parent_window->IDStack.back() == parent_window->ID)
-        ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s", parent_window->Name, name); // May omit ID if in root of ID stack
-    else*/
     if (name)
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s_%08X", parent_window->Name, name, id);
     else
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%08X", parent_window->Name, id);
 
-    // Set style
     const float backup_border_size = g.Style.ChildBorderSize;
-    if ((child_flags & ImGuiChildFlags_Borders) == 0)
+    if ((cf & ImGuiChildFlags_Borders) == 0)
         g.Style.ChildBorderSize = 0.0f;
 
-    // Begin into window
     const bool ret = Begin(temp_window_name, NULL, window_flags);
 
-    // Restore style
     g.Style.ChildBorderSize = backup_border_size;
-    if (child_flags & ImGuiChildFlags_FrameStyle)
+    if (cf & ImGuiChildFlags_FrameStyle)
     {
         PopStyleVar(3);
         PopStyleColor();
@@ -6462,23 +6447,21 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     ImGuiWindow* child_window = g.CurrentWindow;
     child_window->ChildId = id;
 
-    // Set the cursor to handle case where the user called SetNextWindowPos()+BeginChild() manually.
-    // While this is not really documented/defined, it seems that the expected thing to do.
     if (child_window->BeginCount == 1)
         parent_window->DC.CursorPos = child_window->Pos;
 
-    // Process navigation-in immediately so NavInit can run on first frame
-    // Can enter a child if (A) it has navigable items or (B) it can be scrolled.
     const ImGuiID temp_id_for_activation = ImHashStr("##Child", 0, id);
     if (g.ActiveId == temp_id_for_activation)
         ClearActiveID();
-    if (g.NavActivateId == id && !(child_flags & ImGuiChildFlags_NavFlattened) && (child_window->DC.NavLayersActiveMask != 0 || child_window->DC.NavWindowHasScrollY))
+
+    if (g.NavActivateId == id && !(cf & ImGuiChildFlags_NavFlattened) && (child_window->DC.NavLayersActiveMask != 0 || child_window->DC.NavWindowHasScrollY))
     {
         FocusWindow(child_window);
         NavInitWindow(child_window, false);
-        SetActiveID(temp_id_for_activation, child_window); // Steal ActiveId with another arbitrary id so that key-press won't activate child item
+        SetActiveID(temp_id_for_activation, child_window);
         g.ActiveIdSource = g.NavInputSource;
     }
+
     return ret;
 }
 
@@ -9634,20 +9617,24 @@ static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
 bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
+
+    flags |= ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive;
+
     if ((flags & ImGuiInputFlags_RouteTypeMask_) == 0)
-        flags |= ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
+        flags |= ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive;
     else
-        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_)); // Check that only 1 routing flag is used
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_));
+
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_NoOwner);
+
     if (flags & (ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteUnlessBgFocused))
         IM_ASSERT(flags & ImGuiInputFlags_RouteGlobal);
+
     if (flags & ImGuiInputFlags_RouteOverActive)
         IM_ASSERT(flags & (ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteFocused));
 
-    // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
     key_chord = FixupKeyChord(key_chord);
 
-    // [DEBUG] Debug break requested by user
     if (g.DebugBreakInShortcutRouting == key_chord)
         IM_DEBUG_BREAK();
 
@@ -9655,31 +9642,23 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
         if (g.NavWindow == NULL)
             return false;
 
-    // Note how ImGuiInputFlags_RouteAlways won't set routing and thus won't set owner. May want to rework this?
     if (flags & ImGuiInputFlags_RouteAlways)
     {
         IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, flags=%04X, owner_id=0x%08X) -> always, no register\n", GetKeyChordName(key_chord), flags, owner_id);
         return true;
     }
 
-    // Specific culling when there's an active item.
     if (g.ActiveId != 0 && g.ActiveId != owner_id)
     {
         if (flags & ImGuiInputFlags_RouteActive)
             return false;
 
-        // Cull shortcuts with no modifiers when it could generate a character.
-        // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
-        // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
-        // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
-        // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
         if (g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
         {
             IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, flags=%04X, owner_id=0x%08X) -> filtered as potential char input\n", GetKeyChordName(key_chord), flags, owner_id);
             return false;
         }
 
-        // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
         if ((flags & ImGuiInputFlags_RouteOverActive) == 0 && g.ActiveIdUsingAllKeyboardKeys)
         {
             ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
@@ -9690,29 +9669,26 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
         }
     }
 
-    // Where do we evaluate route for?
     ImGuiID focus_scope_id = g.CurrentFocusScopeId;
     if (flags & ImGuiInputFlags_RouteFromRootWindow)
-        focus_scope_id = g.CurrentWindow->RootWindow->ID; // See PushFocusScope() call in Begin()
+        focus_scope_id = g.CurrentWindow->RootWindow->ID;
 
     const int score = CalcRoutingScore(focus_scope_id, owner_id, flags);
     IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, flags=%04X, owner_id=0x%08X) -> score %d\n", GetKeyChordName(key_chord), flags, owner_id, score);
+
     if (score == 0)
         return false;
 
-    // Submit routing for NEXT frame (assuming score is sufficient)
-    // FIXME: Could expose a way to use a "serve last" policy for same score resolution (using >= instead of >).
     ImGuiKeyRoutingData* routing_data = GetShortcutRoutingData(key_chord);
-    //const bool set_route = (flags & ImGuiInputFlags_ServeLast) ? (score >= routing_data->RoutingNextScore) : (score > routing_data->RoutingNextScore);
     if (score > routing_data->RoutingNextScore)
     {
         routing_data->RoutingNext = owner_id;
         routing_data->RoutingNextScore = (ImU16)score;
     }
 
-    // Return routing state for CURRENT frame
     if (routing_data->RoutingCurr == owner_id)
         IMGUI_DEBUG_LOG_INPUTROUTING("--> granting current route\n");
+
     return routing_data->RoutingCurr == owner_id;
 }
 
@@ -9752,27 +9728,33 @@ bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
 bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id)
 {
     const ImGuiKeyData* key_data = GetKeyData(key);
-    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on key ownership)
+    if (!key_data->Down)
         return false;
+
     const float t = key_data->DownDuration;
     if (t < 0.0f)
         return false;
-    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByIsKeyPressed) == 0); // Passing flags not supported by this function!
-    if (flags & (ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RepeatUntilMask_)) // Setting any _RepeatXXX option enables _Repeat
+
+    flags |= ImGuiInputFlags_Repeat;
+
+    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByIsKeyPressed) == 0);
+
+    if (flags & (ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RepeatUntilMask_))
         flags |= ImGuiInputFlags_Repeat;
 
     bool pressed = (t == 0.0f);
+
     if (!pressed && (flags & ImGuiInputFlags_Repeat) != 0)
     {
         float repeat_delay, repeat_rate;
         GetTypematicRepeatRate(flags, &repeat_delay, &repeat_rate);
         pressed = (t > repeat_delay) && GetKeyPressedAmount(key, repeat_delay, repeat_rate) > 0;
+
         if (pressed && (flags & ImGuiInputFlags_RepeatUntilMask_))
         {
-            // Slightly bias 'key_pressed_time' as DownDuration is an accumulation of DeltaTime which we compare to an absolute time value.
-            // Ideally we'd replace DownDuration with KeyPressedTime but it would break user's code.
             ImGuiContext& g = *GImGui;
             double key_pressed_time = g.Time - t + 0.00001f;
+
             if ((flags & ImGuiInputFlags_RepeatUntilKeyModsChange) && (g.LastKeyModsChangeTime > key_pressed_time))
                 pressed = false;
             if ((flags & ImGuiInputFlags_RepeatUntilKeyModsChangeFromNone) && (g.LastKeyModsChangeFromNoneTime > key_pressed_time))
@@ -9781,10 +9763,13 @@ bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id)
                 pressed = false;
         }
     }
+
     if (!pressed)
         return false;
+
     if (!TestKeyOwner(key, owner_id))
         return false;
+
     return true;
 }
 
@@ -10601,16 +10586,23 @@ void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.LastItemData.ID;
+
     if (id == 0 || (g.HoveredId != id && g.ActiveId != id))
         return;
+
+    flags |= ImGuiInputFlags_CondDefault_;
+
     if ((flags & ImGuiInputFlags_CondMask_) == 0)
         flags |= ImGuiInputFlags_CondDefault_;
-    if ((g.HoveredId == id && (flags & ImGuiInputFlags_CondHovered)) || (g.ActiveId == id && (flags & ImGuiInputFlags_CondActive)))
+
+    if ((g.HoveredId == id && (flags & ImGuiInputFlags_CondHovered)) ||
+        (g.ActiveId == id && (flags & ImGuiInputFlags_CondActive)))
     {
-        IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetItemKeyOwner) == 0); // Passing flags not supported by this function!
+        IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetItemKeyOwner) == 0);
         SetKeyOwner(key, id, flags & ~ImGuiInputFlags_CondMask_);
     }
 }
+
 
 void ImGui::SetItemKeyOwner(ImGuiKey key)
 {

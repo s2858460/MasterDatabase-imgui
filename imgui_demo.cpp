@@ -3341,34 +3341,36 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                             ImGui::SetKeyboardFocusHere(-1);
 
                         // Drag and Drop
-                        if (use_drag_drop && ImGui::BeginDragDropSource())
-                        {
-                            // Create payload with full selection OR single unselected item.
-                            // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
-                            if (ImGui::GetDragDropPayload() == NULL)
-                            {
-                                ImVector<int> payload_items;
-                                void* it = NULL;
-                                ImGuiID id = 0;
-                                if (!item_is_selected)
-                                    payload_items.push_back(item_id);
-                                else
-                                    while (selection.GetNextSelectedItem(&it, &id))
-                                        payload_items.push_back((int)id);
-                                ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
-                            }
+                        if (use_drag_drop)
+{
+	if (ImGui::BeginDragDropSource())
+	{
+		// Create payload with full selection OR single unselected item.
+		// (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
+		if (ImGui::GetDragDropPayload() == NULL)
+		{
+			ImVector<int> payload_items;
+			void* it = NULL;
+			ImGuiID id = 0;
+			if (!item_is_selected) {
+				payload_items.push_back(item_id);
+			} else {
+				while (selection.GetNextSelectedItem(&it, &id)) {
+					payload_items.push_back((int)id);
+				}
+			}
+			ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+		}
 
-                            // Display payload content in tooltip
-                            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-                            const int* payload_items = (int*)payload->Data;
-                            const int payload_count = (int)payload->DataSize / (int)sizeof(int);
-                            if (payload_count == 1)
-                                ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_COUNTOF(ExampleNames)]);
-                            else
-                                ImGui::Text("Dragging %d objects", payload_count);
+		// Display payload content in tooltip
+		const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+		const int* payload_items = (int*)payload->Data;
+		const int payload_count = (int)payload->DataSize / (int)sizeof(int);
+		payload_count == 1 && (ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_COUNTOF(ExampleNames)]), true) || (payload_count != 1 && (ImGui::Text("Dragging %d objects", payload_count), true));
+		ImGui::EndDragDropSource();
+	}
+}
 
-                            ImGui::EndDragDropSource();
-                        }
 
                         if (widget_type == WidgetType_TreeNode && item_is_open)
                             ImGui::TreePop();
@@ -3496,19 +3498,20 @@ static void DemoWindowWidgetsTabs()
             }
 
             // Passing a bool* to BeginTabItem() is similar to passing one to Begin():
-            // the underlying bool will be set to false when the tab is closed.
-            if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
-            {
-                for (int n = 0; n < IM_COUNTOF(opened); n++)
-                    if (opened[n] && ImGui::BeginTabItem(names[n], &opened[n], ImGuiTabItemFlags_None))
-                    {
-                        ImGui::Text("This is the %s tab!", names[n]);
-                        if (n & 1)
-                            ImGui::Text("I am an odd tab.");
-                        ImGui::EndTabItem();
-                    }
-                ImGui::EndTabBar();
-            }
+// the underlying bool will be set to false when the tab is closed.
+if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+{
+	for (int n = 0; n < IM_COUNTOF(opened); n++) {
+		opened[n] && ImGui::BeginTabItem(names[n], &opened[n], ImGuiTabItemFlags_None) && (
+			ImGui::Text("This is the %s tab!", names[n]),
+			(n & 1) && (ImGui::Text("I am an odd tab."), true),
+			ImGui::EndTabItem(),
+			true
+		);
+	}
+	ImGui::EndTabBar();
+}
+
             ImGui::Separator();
             ImGui::TreePop();
         }
@@ -3987,20 +3990,26 @@ static void DemoWindowWidgetsTooltips()
         ImGui::SeparatorText("Always On");
 
         // Showcase NOT relying on a IsItemHovered() to emit a tooltip.
-        // Here the tooltip is always emitted when 'always_on == true'.
-        static int always_on = 0;
-        ImGui::RadioButton("Off", &always_on, 0);
-        ImGui::SameLine();
-        ImGui::RadioButton("Always On (Simple)", &always_on, 1);
-        ImGui::SameLine();
-        ImGui::RadioButton("Always On (Advanced)", &always_on, 2);
-        if (always_on == 1)
-            ImGui::SetTooltip("I am following you around.");
-        else if (always_on == 2 && ImGui::BeginTooltip())
-        {
-            ImGui::ProgressBar(sinf((float)ImGui::GetTime()) * 0.5f + 0.5f, ImVec2(ImGui::GetFontSize() * 25, 0.0f));
-            ImGui::EndTooltip();
-        }
+// Here the tooltip is always emitted when 'always_on == true'.
+static int always_on = 0;
+ImGui::RadioButton("Off", &always_on, 0);
+ImGui::SameLine();
+ImGui::RadioButton("Always On (Simple)", &always_on, 1);
+ImGui::SameLine();
+ImGui::RadioButton("Always On (Advanced)", &always_on, 2);
+if (always_on == 1)
+{
+	ImGui::SetTooltip("I am following you around.");
+}
+else if (always_on == 2)
+{
+	ImGui::BeginTooltip() && (
+		ImGui::ProgressBar(sinf((float)ImGui::GetTime()) * 0.5f + 0.5f, ImVec2(ImGui::GetFontSize() * 25, 0.0f)),
+		ImGui::EndTooltip(),
+		true
+	);
+}
+
 
         ImGui::SeparatorText("Custom");
 
@@ -4150,53 +4159,63 @@ static void DemoWindowWidgetsTreeNodes()
             for (int i = 0; i < 6; i++)
             {
                 // Disable the default "open on single-click behavior" + set Selected flag according to our selection.
-                // To alter selection we use IsItemClicked() && !IsItemToggledOpen(), so clicking on an arrow doesn't alter selection.
-                ImGuiTreeNodeFlags node_flags = base_flags;
-                const bool is_selected = (selection_mask & (1 << i)) != 0;
-                if (is_selected)
-                    node_flags |= ImGuiTreeNodeFlags_Selected;
-                if (i < 3)
-                {
-                    // Items 0..2 are Tree Node
-                    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-                        node_clicked = i;
-                    if (test_drag_and_drop && ImGui::BeginDragDropSource())
-                    {
-                        ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                        ImGui::Text("This is a drag and drop source");
-                        ImGui::EndDragDropSource();
-                    }
-                    if (i == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
-                    {
-                        // Item 2 has an additional inline button to help demonstrate SpanLabelWidth.
-                        ImGui::SameLine();
-                        if (ImGui::SmallButton("button")) {}
-                    }
-                    if (node_open)
-                    {
-                        ImGui::BulletText("Blah blah\nBlah Blah");
-                        ImGui::SameLine();
-                        ImGui::SmallButton("Button");
-                        ImGui::TreePop();
-                    }
-                }
-                else
-                {
-                    // Items 3..5 are Tree Leaves
-                    // The only reason we use TreeNode at all is to allow selection of the leaf. Otherwise we can
-                    // use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
-                    node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
-                    ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-                        node_clicked = i;
-                    if (test_drag_and_drop && ImGui::BeginDragDropSource())
-                    {
-                        ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                        ImGui::Text("This is a drag and drop source");
-                        ImGui::EndDragDropSource();
-                    }
-                }
+// To alter selection we use IsItemClicked() && !IsItemToggledOpen(), so clicking on an arrow doesn't alter selection.
+ImGuiTreeNodeFlags node_flags = base_flags;
+const bool is_selected = (selection_mask & (1 << i)) != 0;
+if (is_selected)
+{
+	node_flags |= ImGuiTreeNodeFlags_Selected;
+}
+if (i < 3)
+{
+	// Items 0..2 are Tree Node
+	bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
+	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+	{
+		node_clicked = i;
+	}
+	test_drag_and_drop && ImGui::BeginDragDropSource() && (
+		ImGui::SetDragDropPayload("_TREENODE", NULL, 0),
+		ImGui::Text("This is a drag and drop source"),
+		ImGui::EndDragDropSource(),
+		true
+	);
+	if (i == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
+	{
+		// Item 2 has an additional inline button to help demonstrate SpanLabelWidth.
+		ImGui::SameLine();
+		if (ImGui::SmallButton("button")) {}
+	}
+	if (node_open)
+	{
+		ImGui::BulletText("Blah blah\nBlah Blah");
+		ImGui::SameLine();
+		ImGui::SmallButton("Button");
+		ImGui::TreePop();
+	}
+}
+else
+{
+	// Items 3..5 are Tree Leaves
+	// The only reason we use TreeNode at all is to allow selection of the leaf. Otherwise we can
+	// use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
+	node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
+	ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
+	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+	{
+		node_clicked = i;
+	}
+	if (test_drag_and_drop)
+	{
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+			ImGui::Text("This is a drag and drop source");
+			ImGui::EndDragDropSource();
+		}
+	}
+}
+
             }
             if (node_clicked != -1)
             {
@@ -4373,37 +4392,38 @@ static void DemoWindowLayout()
         ImGui::SameLine();
 
         // Child 2: rounded border
-        {
-            ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
-            if (disable_mouse_wheel)
-                window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
-            if (!disable_menu)
-                window_flags |= ImGuiWindowFlags_MenuBar;
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::BeginChild("ChildR", ImVec2(0, 260), ImGuiChildFlags_Borders, window_flags);
-            if (!disable_menu && ImGui::BeginMenuBar())
-            {
-                if (ImGui::BeginMenu("Menu"))
-                {
-                    ShowExampleMenuFile();
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenuBar();
-            }
-            if (ImGui::BeginTable("split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings))
-            {
-                for (int i = 0; i < 100; i++)
-                {
-                    char buf[32];
-                    sprintf(buf, "%03d", i);
-                    ImGui::TableNextColumn();
-                    ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
-                }
-                ImGui::EndTable();
-            }
-            ImGui::EndChild();
-            ImGui::PopStyleVar();
-        }
+{
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+	if (disable_mouse_wheel)
+	{
+		window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
+	}
+	if (!disable_menu)
+	{
+		window_flags |= ImGuiWindowFlags_MenuBar;
+	}
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+	ImGui::BeginChild("ChildR", ImVec2(0, 260), ImGuiChildFlags_Borders, window_flags);
+	!disable_menu && ImGui::BeginMenuBar() && (
+		ImGui::BeginMenu("Menu") && (ShowExampleMenuFile(), ImGui::EndMenu(), true),
+		ImGui::EndMenuBar(),
+		true
+	);
+	if (ImGui::BeginTable("split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings))
+	{
+		for (int i = 0; i < 100; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%03d", i);
+			ImGui::TableNextColumn();
+			ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+		}
+		ImGui::EndTable();
+	}
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
+}
+
 
         // Child 3: manual-resize
         ImGui::SeparatorText("Manual-resize");
@@ -5109,14 +5129,15 @@ static void DemoWindowLayout()
                 }
                 ImGui::Columns(1);
             }
-            if (show_tab_bar && ImGui::BeginTabBar("Hello"))
-            {
-                if (ImGui::BeginTabItem("OneOneOne")) { ImGui::EndTabItem(); }
-                if (ImGui::BeginTabItem("TwoTwoTwo")) { ImGui::EndTabItem(); }
-                if (ImGui::BeginTabItem("ThreeThreeThree")) { ImGui::EndTabItem(); }
-                if (ImGui::BeginTabItem("FourFourFour")) { ImGui::EndTabItem(); }
-                ImGui::EndTabBar();
-            }
+           show_tab_bar && ImGui::BeginTabBar("Hello") && (
+	ImGui::BeginTabItem("OneOneOne") && (ImGui::EndTabItem(), true),
+	ImGui::BeginTabItem("TwoTwoTwo") && (ImGui::EndTabItem(), true),
+	ImGui::BeginTabItem("ThreeThreeThree") && (ImGui::EndTabItem(), true),
+	ImGui::BeginTabItem("FourFourFour") && (ImGui::EndTabItem(), true),
+	ImGui::EndTabBar(),
+	true
+);
+
             if (show_child)
             {
                 ImGui::BeginChild("child", ImVec2(0, 0), ImGuiChildFlags_Borders);
@@ -7164,20 +7185,24 @@ static void DemoWindowTables()
             char buf[32];
             sprintf(buf, "Synced Table %d", n);
             bool open = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_DefaultOpen);
-            if (open && ImGui::BeginTable("Table", 3, flags, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5)))
-            {
-                ImGui::TableSetupColumn("One");
-                ImGui::TableSetupColumn("Two");
-                ImGui::TableSetupColumn("Three");
-                ImGui::TableHeadersRow();
-                const int cell_count = (n == 1) ? 27 : 9; // Make second table have a scrollbar to verify that additional decoration is not affecting column positions.
-                for (int cell = 0; cell < cell_count; cell++)
-                {
-                    ImGui::TableNextColumn();
-                    ImGui::Text("this cell %d", cell);
-                }
-                ImGui::EndTable();
-            }
+open && ImGui::BeginTable("Table", 3, flags, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5)) && (
+	ImGui::TableSetupColumn("One"),
+	ImGui::TableSetupColumn("Two"),
+	ImGui::TableSetupColumn("Three"),
+	ImGui::TableHeadersRow(),
+	(const int cell_count = (n == 1) ? 27 : 9, true),
+	([&]() {
+		for (int cell = 0; cell < cell_count; cell++)
+		{
+			ImGui::TableNextColumn();
+			ImGui::Text("this cell %d", cell);
+		}
+		return true;
+	}()),
+	ImGui::EndTable(),
+	true
+);
+
         }
         ImGui::TreePop();
     }
@@ -9809,28 +9834,49 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
         window_flags |= ImGuiWindowFlags_NoMove;
     }
     ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-    if (ImGui::Begin("Example: Simple overlay", p_open, window_flags))
-    {
-        IMGUI_DEMO_MARKER("Examples/Simple Overlay");
-        ImGui::Text("Simple overlay\n" "(right-click to change position)");
-        ImGui::Separator();
-        if (ImGui::IsMousePosValid())
-            ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
-        else
-            ImGui::Text("Mouse Position: <invalid>");
-        if (ImGui::BeginPopupContextWindow())
-        {
-            if (ImGui::MenuItem("Custom",       NULL, location == -1)) location = -1;
-            if (ImGui::MenuItem("Center",       NULL, location == -2)) location = -2;
-            if (ImGui::MenuItem("Top-left",     NULL, location == 0)) location = 0;
-            if (ImGui::MenuItem("Top-right",    NULL, location == 1)) location = 1;
-            if (ImGui::MenuItem("Bottom-left",  NULL, location == 2)) location = 2;
-            if (ImGui::MenuItem("Bottom-right", NULL, location == 3)) location = 3;
-            if (p_open && ImGui::MenuItem("Close")) *p_open = false;
-            ImGui::EndPopup();
-        }
-    }
-    ImGui::End();
+if (ImGui::Begin("Example: Simple overlay", p_open, window_flags))
+{
+	IMGUI_DEMO_MARKER("Examples/Simple Overlay");
+	ImGui::Text("Simple overlay\n" "(right-click to change position)");
+	ImGui::Separator();
+	if (ImGui::IsMousePosValid()) {
+		ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
+	} else {
+		ImGui::Text("Mouse Position: <invalid>");
+	}
+	if (ImGui::BeginPopupContextWindow())
+{
+	if (ImGui::MenuItem("Custom", NULL, location == -1))
+	{
+		location = -1;
+	}
+	if (ImGui::MenuItem("Center", NULL, location == -2))
+	{
+		location = -2;
+	}
+	if (ImGui::MenuItem("Top-left", NULL, location == 0))
+	{
+		location = 0;
+	}
+	if (ImGui::MenuItem("Top-right", NULL, location == 1))
+	{
+		location = 1;
+	}
+	if (ImGui::MenuItem("Bottom-left", NULL, location == 2))
+	{
+		location = 2;
+	}
+	if (ImGui::MenuItem("Bottom-right", NULL, location == 3))
+	{
+		location = 3;
+	}
+	p_open && ImGui::MenuItem("Close") && (*p_open = false, true);
+	ImGui::EndPopup();
+}
+
+}
+ImGui::End();
+
 }
 
 //-----------------------------------------------------------------------------
@@ -9863,8 +9909,7 @@ static void ShowExampleAppFullscreen(bool* p_open)
         ImGui::CheckboxFlags("ImGuiWindowFlags_NoScrollbar", &flags, ImGuiWindowFlags_NoScrollbar);
         ImGui::Unindent();
 
-        if (p_open && ImGui::Button("Close this window"))
-            *p_open = false;
+        p_open && ImGui::Button("Close this window") && (*p_open = false, true);
     }
     ImGui::End();
 }
@@ -10356,29 +10401,43 @@ void ShowExampleAppDocuments(bool* p_open)
 
     // Menu
     if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            int open_count = 0;
-            for (MyDocument& doc : app.Documents)
-                open_count += doc.Open ? 1 : 0;
+{
+	if (ImGui::BeginMenu("File"))
+	{
+		int open_count = 0;
+		for (MyDocument& doc : app.Documents) {
+			open_count += doc.Open ? 1 : 0;
+		}
 
-            if (ImGui::BeginMenu("Open", open_count < app.Documents.Size))
-            {
-                for (MyDocument& doc : app.Documents)
-                    if (!doc.Open && ImGui::MenuItem(doc.Name))
-                        doc.DoOpen();
-                ImGui::EndMenu();
-            }
-            if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
-                for (MyDocument& doc : app.Documents)
-                    app.CloseQueue.push_back(&doc);
-            if (ImGui::MenuItem("Exit") && p_open)
-                *p_open = false;
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
+		if (open_count < app.Documents.Size)
+		{
+			if (ImGui::BeginMenu("Open", true))
+			{
+				for (MyDocument& doc : app.Documents) {
+					if (!doc.Open && ImGui::MenuItem(doc.Name)) {
+						doc.DoOpen();
+					}
+				}
+				ImGui::EndMenu();
+			}
+		}
+
+		if (open_count > 0)
+		{
+			if (ImGui::MenuItem("Close All Documents", NULL, false, true)) {
+				for (MyDocument& doc : app.Documents) {
+					app.CloseQueue.push_back(&doc);
+				}
+			}
+		}
+
+		p_open && ImGui::MenuItem("Exit") && (*p_open = false, true);
+
+		ImGui::EndMenu();
+	}
+	ImGui::EndMenuBar();
+}
+
 
     // [Debug] List documents with one checkbox for each
     for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
